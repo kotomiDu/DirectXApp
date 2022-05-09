@@ -9,7 +9,7 @@
 #include <d3d11.h>
 #include <windows.h>
 
-#include <ie/inference_engine.hpp>
+#include <inference_engine.hpp>
 #include <opencv2/opencv.hpp>
 
 using namespace InferenceEngine;

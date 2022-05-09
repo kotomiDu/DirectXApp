@@ -6,7 +6,7 @@
 */
 
 #define WIN32_LEAN_AND_MEAN
-#define OV_ENABLE 0
+#define OV_ENABLE 1
 #include <windows.h>
 #include <d3d11.h>
 
@@ -18,7 +18,7 @@
 #include "d3dsample.hpp"
 
 #if OV_ENABLE
-#include <ie/inference_engine.hpp>
+#include <inference_engine.hpp>
 #include "cnn.hpp"
 #endif
 
@@ -189,7 +189,7 @@ public:
             cv::ocl::Context::getDefault().device(0).name() :
             "No OpenCL device";
 #if OV_ENABLE
-        modelcnn.Init("model.xml", ie, *m_pD3D11Dev, cv::Size(128, 128));
+        modelcnn.Init("C://Users//yarudu//OneDrive - Intel Corporation//Documents//project//DirectXApp//models//model_composition_v5_no_padding.xml", ie, *m_pD3D11Dev, cv::Size(640, 480));
 #endif
 
         return EXIT_SUCCESS;
@@ -221,6 +221,7 @@ public:
 
             D3D11_MAPPED_SUBRESOURCE mappedTex;
             r = m_pD3D11Ctx->Map(m_pSurfaceRGBA, subResource, D3D11_MAP_WRITE_DISCARD, 0, &mappedTex);
+            //当需要用CPU读写（GPU的）subresouce（最常用如buffer）时，就用Map()得到该subresource的pointer,将D3D11_MAPPED_SUBRESOURCE::pData强制转换成CPU理解的类型
             if (FAILED(r))
             {
                 throw std::runtime_error("surface mapping failed!");
@@ -312,6 +313,7 @@ public:
                 {
                     // blur data from D3D11 surface with OpenCV on GPU with OpenCL
                     cv::blur(u, u, cv::Size(15, 15));
+                 
                 }
 
                 m_timer.stop();
@@ -325,7 +327,7 @@ public:
                 cv::putText(u, strProcessing, cv::Point(0, 40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
                 cv::putText(u, strTime, cv::Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
                 cv::putText(u, strDevName, cv::Point(0, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
-
+                //std::cout << u.size().width << ";" << u.size().height << std::endl;
                 cv::directx::convertToD3D11Texture2D(u, pSurface);
 #if OV_ENABLE
                 modelcnn.Infer(pSurface);

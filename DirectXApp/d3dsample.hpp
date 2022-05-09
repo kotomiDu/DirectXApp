@@ -11,6 +11,7 @@
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/videoio.hpp"
+#include "inference_engine.hpp"
 
 #include "winapp.hpp"
 
@@ -31,7 +32,7 @@ public:
         WinApp(width, height, window_name)
     {
         m_shutdown          = false;
-        m_mode              = MODE_CPU;
+        m_mode              = MODE_GPU_RGBA;
         m_modeStr[0]        = cv::String("Processing on CPU");
         m_modeStr[1]        = cv::String("Processing on GPU RGBA");
         m_modeStr[2]        = cv::String("Processing on GPU NV12");

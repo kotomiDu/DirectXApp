@@ -21,12 +21,18 @@
     <ClCompile Include="d3d11_interop.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cnn.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="d3dsample.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="winapp.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cnn.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

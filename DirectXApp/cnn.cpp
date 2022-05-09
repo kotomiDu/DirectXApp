@@ -9,7 +9,7 @@
 #include <string>
 #include <d3d11.h>
 #include <windows.h>
-#include <ie/gpu/gpu_context_api_ocl.hpp>
+#include <gpu/gpu_context_api_dx.hpp>
 
 
 void Cnn::Init(const std::string &model_path, Core & ie, ID3D11Device& d3d_device, const cv::Size &new_input_resolution) {
@@ -43,9 +43,9 @@ void Cnn::Init(const std::string &model_path, Core & ie, ID3D11Device& d3d_devic
     input_info_ = network.getInputsInfo().begin()->second;
     input_name_ = network.getInputsInfo().begin()->first;
 
-    input_info_->setLayout(Layout::NCHW);
+    input_info_->setLayout(Layout::NCHW); //bfyx
     //input_info->setPrecision(Precision::FP32);
-
+    input_info_->getPreProcess().setColorFormat(ColorFormat::RGBX);
     channels_ = input_info_->getTensorDesc().getDims()[1];
     input_size_ = cv::Size(input_info_->getTensorDesc().getDims()[3], input_info_->getTensorDesc().getDims()[2]);
 
@@ -59,7 +59,7 @@ void Cnn::Init(const std::string &model_path, Core & ie, ID3D11Device& d3d_devic
     // ---------------------------------------------------------------------------------------------------
 
     // --------------------------- Loading model to the device -------------------------------------------
-    remote_context_ = gpu::make_shared_context(ie, "GPU", d3d_device); // ??set it as privete in cnn
+    remote_context_ = gpu::make_shared_context(ie, "GPU", &d3d_device); 
     ExecutableNetwork executable_network = ie.LoadNetwork(network, remote_context_); // change device to RemoteContext
     // ---------------------------------------------------------------------------------------------------
 

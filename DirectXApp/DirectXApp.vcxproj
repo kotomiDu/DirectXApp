@@ -116,14 +116,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)third-party\opencv\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)third-party\opencv\include;$(SolutionDir)third-party\openvino\include;$(SolutionDir)third-party\ocl\clhpp_headers\include;$(SolutionDir)third-party\ocl\cl_headers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)third-party\opencv\lib;$(SolutionDir)third-party\openvino\lib\lib_debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opencv_imgproc454d.lib;opencv_core454d.lib;opencv_imgcodecs454d.lib;opencv_video454d.lib;opencv_videoio454d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)third-party\opencv\lib;$(SolutionDir)third-party\openvino\lib\lib_debug;$(SolutionDir)third-party\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OpenCL.lib;opencv_imgproc454d.lib;opencv_core454d.lib;opencv_imgcodecs454d.lib;opencv_video454d.lib;opencv_videoio454d.lib;inference_engined.lib;inference_engine_ir_readerd.lib;inference_engine_legacyd.lib;inference_engine_lp_transformationsd.lib;inference_engine_transformationsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -134,7 +134,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)third-party\opencv\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)third-party\opencv\include;$(SolutionDir)third-party\openvino\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -146,10 +146,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cnn.cpp" />
     <ClCompile Include="d3d11_interop.cpp" />
     <ClCompile Include="DirectXApp.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cnn.hpp" />
     <ClInclude Include="d3dsample.hpp" />
     <ClInclude Include="winapp.hpp" />
   </ItemGroup>
