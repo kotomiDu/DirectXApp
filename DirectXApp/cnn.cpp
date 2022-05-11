@@ -27,6 +27,7 @@ void Cnn::Init(const std::string &model_path, Core & ie, ID3D11Device& d3d_devic
 
     SizeVector input_dims = inputInfoFirst->getInputData()->getTensorDesc().getDims();
     input_dims[0] = 1;
+    //input_dims[1] = 4;
     if (new_input_resolution != cv::Size()) {
         input_dims[2] = static_cast<size_t>(new_input_resolution.height);
         input_dims[3] = static_cast<size_t>(new_input_resolution.width);
@@ -45,7 +46,11 @@ void Cnn::Init(const std::string &model_path, Core & ie, ID3D11Device& d3d_devic
 
     input_info_->setLayout(Layout::NCHW); //bfyx
     //input_info->setPrecision(Precision::FP32);
+    //std::cout << input_info_->getPreProcess().getNumberOfChannels() << std::endl;
+    //input_info_->getPreProcess().init(4);
     input_info_->getPreProcess().setColorFormat(ColorFormat::RGBX);
+    //std::cout << input_info_->getPreProcess().getNumberOfChannels() <<std::endl;
+
     channels_ = input_info_->getTensorDesc().getDims()[1];
     input_size_ = cv::Size(input_info_->getTensorDesc().getDims()[3], input_info_->getTensorDesc().getDims()[2]);
 
@@ -69,12 +74,20 @@ void Cnn::Init(const std::string &model_path, Core & ie, ID3D11Device& d3d_devic
 
     is_initialized_ = true;
 }
-
+//inputname --- preprocess -- inputname2
 
 void Cnn::Infer(ID3D11Texture2D* surface) {
-    auto shared_blob = gpu::make_shared_blob(input_info_->getTensorDesc(), remote_context_, surface);
-    infer_request_.SetBlob(input_name_,shared_blob);
-    infer_request_.Infer();
+
+    TensorDesc temp = input_info_->getTensorDesc();
+    auto dims = temp.getDims();
+    dims[1] = 4;
+    temp.setDims(dims);
+
+    auto shared_blob = gpu::make_shared_blob(temp, remote_context_, surface); ////rgba--->rbg
+    infer_request_.SetBlob(input_name_,shared_blob); // 4*640*480   
+    infer_request_.Infer();// 3*640*480
+
+    //4*640*480--->3*640*480
 
     // --------------------------- Processing output -----------------------------------------------------
 
