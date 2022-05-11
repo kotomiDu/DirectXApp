@@ -4,3 +4,4 @@ __pycache__
 x64
 third-party\openvino\src
 third-party\openvino\thirdparty
+.klocwork
