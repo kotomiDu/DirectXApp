@@ -153,11 +153,11 @@ int d3d_app(int argc, char** argv, std::string& title)
 
     TApp app(width, height, wndname, cap);
 
-    try
-    {
+    //try
+    //{
         app.create();
         return app.run();
-    }
+   /* }
 
     catch (const cv::Exception& e)
     {
@@ -169,5 +169,5 @@ int d3d_app(int argc, char** argv, std::string& title)
     {
         std::cerr << "FATAL ERROR: Unknown exception" << std::endl;
         return 11;
-    }
+    }*/
 }

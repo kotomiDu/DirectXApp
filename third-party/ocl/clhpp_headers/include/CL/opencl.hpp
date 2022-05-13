@@ -1645,6 +1645,7 @@ template<typename T>
 struct ReferenceHandler
 { };
 
+
 #if CL_HPP_TARGET_OPENCL_VERSION >= 120
 /**
  * OpenCL 1.2 devices do have retain/release.
@@ -1661,19 +1662,11 @@ struct ReferenceHandler<cl_device_id>
      *   CL_OUT_OF_RESOURCES
      *   CL_OUT_OF_HOST_MEMORY
      */
-    static cl_int retain(cl_device_id device)
-    { return ::clRetainDevice(device); }
-    /**
-     * Retain the device.
-     * \param device A valid device created using createSubDevices
-     * \return 
-     *   CL_SUCCESS if the function executed successfully.
-     *   CL_INVALID_DEVICE if device was not a valid subdevice
-     *   CL_OUT_OF_RESOURCES
-     *   CL_OUT_OF_HOST_MEMORY
-     */
-    static cl_int release(cl_device_id device)
-    { return ::clReleaseDevice(device); }
+    static cl_int retain(cl_device_id)
+    { return CL_SUCCESS; }
+    // cl_device_id does not have release().
+    static cl_int release(cl_device_id)
+    { return CL_SUCCESS; }
 };
 #else // CL_HPP_TARGET_OPENCL_VERSION >= 120
 /**
@@ -1706,18 +1699,18 @@ template <>
 struct ReferenceHandler<cl_context>
 {
     static cl_int retain(cl_context context)
-    { return ::clRetainContext(context); }
+    { return CL_SUCCESS; }
     static cl_int release(cl_context context)
-    { return ::clReleaseContext(context); }
+    { return CL_SUCCESS; }
 };
 
 template <>
 struct ReferenceHandler<cl_command_queue>
 {
     static cl_int retain(cl_command_queue queue)
-    { return ::clRetainCommandQueue(queue); }
+    { return CL_SUCCESS; }
     static cl_int release(cl_command_queue queue)
-    { return ::clReleaseCommandQueue(queue); }
+    { return CL_SUCCESS; }
 };
 
 template <>

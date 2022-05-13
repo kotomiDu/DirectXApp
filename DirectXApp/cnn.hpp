@@ -18,7 +18,7 @@ class Cnn {
   public:
     Cnn():is_initialized_(false), channels_(0), time_elapsed_(0), ncalls_(0) {}
 
-    void Init(const std::string &model_path, Core & ie, ID3D11Device& d3d_device,
+    void Init(const std::string &model_path,  ID3D11Device*& d3d_device,
               const cv::Size &new_input_resolution = cv::Size());
 
     InferenceEngine::BlobMap Infer(const cv::Mat &frame);

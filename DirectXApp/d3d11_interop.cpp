@@ -16,7 +16,7 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/videoio.hpp"
 #include "d3dsample.hpp"
-
+#include <openvino/runtime/intel_gpu/ocl/dx.hpp>
 #if OV_ENABLE
 #include <inference_engine.hpp>
 #include "cnn.hpp"
@@ -188,8 +188,10 @@ public:
         m_oclDevName = cv::ocl::useOpenCL() ?
             cv::ocl::Context::getDefault().device(0).name() :
             "No OpenCL device";
+
+       
 #if OV_ENABLE
-        modelcnn.Init("C://Users//yarudu//OneDrive - Intel Corporation//Documents//project//DirectXApp//models//model_composition_v5_no_padding.xml", ie, *m_pD3D11Dev, cv::Size(640, 480));
+        modelcnn.Init("C://Users//yarudu//OneDrive - Intel Corporation//Documents//project//DirectXApp//models//model_composition_v5_no_padding.xml",  m_pD3D11Dev, cv::Size(640, 480));
 #endif
 
         return EXIT_SUCCESS;
@@ -330,10 +332,9 @@ public:
                 //std::cout << u.size().width << ";" << u.size().height << std::endl;
                 cv::directx::convertToD3D11Texture2D(u, pSurface);
 #if OV_ENABLE
-                modelcnn.Infer(pSurface);
+               // modelcnn.Infer(pSurface);
 #endif
 
-                //InferenceEngine::gpu::make_shared_blob()
                 if (mode == MODE_GPU_NV12)
                 {
                     // just for rendering, we need to convert NV12 to RGBA.
@@ -493,7 +494,7 @@ private:
     cv::Mat                 m_frame_i420;
     cv::Mat                 m_frame_nv12;
 #if OV_ENABLE
-    Core                    ie;
+    ov::Core                    *core;
     Cnn                     modelcnn;
 #endif
 };

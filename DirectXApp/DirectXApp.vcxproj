@@ -116,14 +116,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)third-party\opencv\include;$(SolutionDir)third-party\openvino\include\ie;$(SolutionDir)third-party\openvino\include;$(SolutionDir)third-party\ocl\clhpp_headers\include;$(SolutionDir)third-party\ocl\cl_headers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>Default</LanguageStandard>
+      <AdditionalIncludeDirectories>$(SolutionDir)third-party\opencv\include;$(SolutionDir)third-party\openvino\include\ie;$(SolutionDir)third-party\openvino\include;$(SolutionDir)third-party\ocl\cl_headers;$(SolutionDir)third-party\ocl\clhpp_headers\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)third-party\opencv\lib;$(SolutionDir)third-party\openvino\lib\intel64\Debug;$(SolutionDir)third-party\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OpenCL.lib;opencv_imgproc454d.lib;opencv_core454d.lib;opencv_imgcodecs454d.lib;opencv_video454d.lib;opencv_videoio454d.lib;openvino_ir_frontendd.lib;openvinod.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opencv_imgproc454d.lib;opencv_core454d.lib;opencv_imgcodecs454d.lib;opencv_video454d.lib;opencv_videoio454d.lib;openvino_ir_frontendd.lib;openvinod.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
