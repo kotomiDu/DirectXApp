@@ -6,4 +6,3 @@ third-party\openvino\src
 third-party\openvino\thirdparty
 .klocwork
 pdb_file
-models
