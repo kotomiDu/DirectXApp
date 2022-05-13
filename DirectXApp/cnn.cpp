@@ -20,9 +20,9 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, const 
      ov::Core core;
 
     auto model = core.read_model(model_path);
-    ov::AnyMap config;
+    //ov::AnyMap config;
     //auto context = core.create_context("GPU", config);
-   /* Core ie;
+    /*Core ie;
     auto network = ie.ReadNetwork(model_path);*/
 
     //// --------------------------- Changing input shape if it is needed ----------------------------------
@@ -66,13 +66,13 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, const 
     // ---------------------------------------------------------------------------------------------------
 
     // --------------------------- Loading model to the device -------------------------------------------
-    auto compile_model = core.compile_model(model,"GPU");
-    auto gpu_context = core.get_default_context("GPU").as<ov::intel_gpu::ocl::ClContext>();
+    //auto compile_model = core.compile_model(model,"GPU");
+    //auto gpu_context = core.get_default_context("GPU").as<ov::intel_gpu::ocl::ClContext>();
     //// Extract ocl context handle from RemoteContext
-    cl_context context_handle = gpu_context.get();
-    //ov::intel_gpu::ocl::D3DContext gpu_context(core, d3d_device);
-    //auto exec_net_shared = core.compile_model(model, gpu_context); // change device to RemoteContext
-    //remote_context_ = gpu::make_shared_context(ie, "GPU", &d3d_device);
+    //cl_context context_handle = gpu_context.get();
+    ov::intel_gpu::ocl::D3DContext gpu_context(core, d3d_device);
+    auto exec_net_shared = core.compile_model(model, gpu_context); // change device to RemoteContext
+    //remote_context_ = gpu::make_shared_context(ie, "GPU", d3d_device);
     //ExecutableNetwork executable_network = ie.LoadNetwork(network, remote_context_); // change device to RemoteContext
 
     // ---------------------------------------------------------------------------------------------------

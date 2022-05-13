@@ -163,14 +163,11 @@ static inline D3DContext::Ptr make_shared_context(Core& core,
                                                   ID3D11Device* device,
                                                   int target_tile_id = -1) {
     // clang-format off
-    ParamMap contextParams= {
+    ParamMap contextParams = {
         {GPU_PARAM_KEY(CONTEXT_TYPE), GPU_PARAM_VALUE(VA_SHARED)},
         {GPU_PARAM_KEY(VA_DEVICE), static_cast<gpu_handle_param>(device)},
         {GPU_PARAM_KEY(TILE_ID), target_tile_id}
     };
-    //contextParams.insert({ GPU_PARAM_KEY(VA_DEVICE), static_cast<gpu_handle_param>(device) });
-    std::pair<std::string, ov::Any> temp = { GPU_PARAM_KEY(TILE_ID), target_tile_id };
-    contextParams.insert(temp);
     // clang-format on
     return std::dynamic_pointer_cast<D3DContext>(core.CreateContext(deviceName, contextParams));
 }

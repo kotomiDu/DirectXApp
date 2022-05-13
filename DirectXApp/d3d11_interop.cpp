@@ -191,7 +191,7 @@ public:
 
        
 #if OV_ENABLE
-        modelcnn.Init("C://Users//yarudu//OneDrive - Intel Corporation//Documents//project//DirectXApp//models//model_composition_v5_no_padding.xml",  m_pD3D11Dev, cv::Size(640, 480));
+        modelcnn.Init("C://Users//Kotomi//Documents//project//DirectXApp//models//model_composition_v5_no_padding.xml",  m_pD3D11Dev, cv::Size(640, 480));
 #endif
 
         return EXIT_SUCCESS;
