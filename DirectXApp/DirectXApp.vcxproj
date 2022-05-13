@@ -23,7 +23,7 @@
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{e7b165e6-dda4-4d5a-9850-b09658c32373}</ProjectGuid>
     <RootNamespace>DirectXApp</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -114,16 +114,16 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)third-party\opencv\include;$(SolutionDir)third-party\openvino\include;$(SolutionDir)third-party\ocl\clhpp_headers\include;$(SolutionDir)third-party\ocl\cl_headers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>$(SolutionDir)third-party\opencv\include;$(SolutionDir)third-party\openvino\include\ie;$(SolutionDir)third-party\openvino\include;$(SolutionDir)third-party\ocl\clhpp_headers\include;$(SolutionDir)third-party\ocl\cl_headers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>Default</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)third-party\opencv\lib;$(SolutionDir)third-party\openvino\lib\lib_debug;$(SolutionDir)third-party\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OpenCL.lib;opencv_imgproc454d.lib;opencv_core454d.lib;opencv_imgcodecs454d.lib;opencv_video454d.lib;opencv_videoio454d.lib;inference_engined.lib;inference_engine_ir_readerd.lib;inference_engine_legacyd.lib;inference_engine_lp_transformationsd.lib;inference_engine_transformationsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)third-party\opencv\lib;$(SolutionDir)third-party\openvino\lib\intel64\Debug;$(SolutionDir)third-party\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OpenCL.lib;opencv_imgproc454d.lib;opencv_core454d.lib;opencv_imgcodecs454d.lib;opencv_video454d.lib;opencv_videoio454d.lib;openvino_ir_frontendd.lib;openvinod.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
