@@ -191,7 +191,7 @@ public:
 
        
 #if OV_ENABLE
-        modelcnn.Init("C://Users//Kotomi//Documents//project//DirectXApp//models//model_composition_v5_no_padding.xml",  m_pD3D11Dev, cv::Size(640, 480));
+        modelcnn.Init("models//model_composition_v5_no_padding.xml",  m_pD3D11Dev, cv::Size(640, 480));
 #endif
 
         return EXIT_SUCCESS;
@@ -332,7 +332,7 @@ public:
                 //std::cout << u.size().width << ";" << u.size().height << std::endl;
                 cv::directx::convertToD3D11Texture2D(u, pSurface);
 #if OV_ENABLE
-               // modelcnn.Infer(pSurface);
+               modelcnn.Infer(pSurface);
 #endif
 
                 if (mode == MODE_GPU_NV12)

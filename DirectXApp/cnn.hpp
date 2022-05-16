@@ -9,8 +9,10 @@
 #include <d3d11.h>
 #include <windows.h>
 
-#include <inference_engine.hpp>
 #include <opencv2/opencv.hpp>
+#include "openvino/openvino.hpp"
+#include "openvino/runtime/intel_gpu/ocl/ocl.hpp"
+#include "openvino/runtime/intel_gpu/ocl/dx.hpp"
 
 using namespace InferenceEngine;
 
@@ -20,8 +22,6 @@ class Cnn {
 
     void Init(const std::string &model_path,  ID3D11Device*& d3d_device,
               const cv::Size &new_input_resolution = cv::Size());
-
-    InferenceEngine::BlobMap Infer(const cv::Mat &frame);
 
     bool is_initialized() const {return is_initialized_;}
 
@@ -37,12 +37,12 @@ class Cnn {
     cv::Size input_size_;
     int channels_;
     std::string input_name_;
-    InferRequest infer_request_;
     std::vector<std::string> output_names_;
 
     double time_elapsed_;
     size_t ncalls_;
 
-    RemoteContext::Ptr remote_context_;
-    InputInfo::Ptr input_info_;
+    ov::InferRequest infer_request;
+    ov::intel_gpu::ocl::D3DContext* remote_context;
+
 };
