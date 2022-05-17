@@ -20,8 +20,10 @@ class Cnn {
   public:
     Cnn():is_initialized_(false), channels_(0), time_elapsed_(0), ncalls_(0) {}
 
-    void Init(const std::string &model_path,  ID3D11Device*& d3d_device,
+    void Init(const std::string &model_path,  ID3D11Device*& d3d_device, ID3D11Texture2D* input_surface, ID3D11Buffer* output_surface,
               const cv::Size &new_input_resolution = cv::Size());
+
+    void Init(const std::string& model_path, ID3D11Device*& d3d_device, cv::Mat input_data);
 
     bool is_initialized() const {return is_initialized_;}
 

@@ -32,11 +32,11 @@ public:
         WinApp(width, height, window_name)
     {
         m_shutdown          = false;
-        m_mode              = MODE_GPU_RGBA;
+        m_mode              = MODE_CPU;
         m_modeStr[0]        = cv::String("Processing on CPU");
         m_modeStr[1]        = cv::String("Processing on GPU RGBA");
         m_modeStr[2]        = cv::String("Processing on GPU NV12");
-        m_demo_processing   = false;
+        m_demo_processing   = true;
         m_cap               = cap;
     }
 

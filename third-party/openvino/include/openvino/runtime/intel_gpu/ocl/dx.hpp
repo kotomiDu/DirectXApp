@@ -172,7 +172,7 @@ public:
     D3DBufferTensor create_tensor(const element::Type type, const Shape& shape, ID3D11Buffer* buffer) {
         AnyMap params = {{GPU_PARAM_KEY(SHARED_MEM_TYPE), GPU_PARAM_VALUE(DX_BUFFER)},
                            {GPU_PARAM_KEY(DEV_OBJECT_HANDLE), static_cast<gpu_handle_param>(buffer)}};
-        create_tensor(type, shape, params).as<D3DBufferTensor>();
+       return create_tensor(type, shape, params).as<D3DBufferTensor>();
     }
 
     /**
