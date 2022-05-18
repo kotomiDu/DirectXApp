@@ -125,6 +125,11 @@
       <AdditionalLibraryDirectories>$(SolutionDir)third-party\opencv\lib;$(SolutionDir)third-party\openvino\lib\intel64\Debug;$(SolutionDir)third-party\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>opencv_imgproc454d.lib;opencv_core454d.lib;opencv_imgcodecs454d.lib;opencv_video454d.lib;opencv_videoio454d.lib;openvino_ir_frontendd.lib;openvinod.lib;OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)third-party\opencv\bin\dll_debug\*.* ..\X64\Debug\  /y
+xcopy $(SolutionDir)third-party\openvino\bin\intel64\Debug\*.* ..\X64\Debug\ /y
+xcopy $(SolutionDir)third-party\tbb\bin\tbb_debug.dll ..\X64\Debug\  /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
