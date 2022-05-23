@@ -15,6 +15,8 @@
 #include "openvino/runtime/intel_gpu/ocl/ocl.hpp"
 #include "openvino/runtime/intel_gpu/ocl/dx.hpp"
 
+#include "openvino/opsets/opset8.hpp"
+
 void Cnn::Init(const std::string& model_path, ID3D11Device*& d3d_device, cv::Mat input_data)
 {
     ov::Core core;
@@ -51,7 +53,7 @@ void Cnn::Init(const std::string& model_path, ID3D11Device*& d3d_device, cv::Mat
     infer_request.infer();
 }
 
-void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, ID3D11Texture2D* input_surface, ID3D11Buffer* output_surface, const cv::Size &new_input_resolution) {
+void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, ID3D11Buffer* input_buffer, ID3D11Buffer* output_buffer, const cv::Size &new_input_resolution) {
     //// ---------------------------------------------------------------------------------------------------
 
     //// --------------------------- 1. Reading network ----------------------------------------------------
@@ -66,27 +68,45 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, ID3D11
         .tensor()
         .set_layout("NHWC")
         .set_element_type(ov::element::u8)
-        .set_color_format(ov::preprocess::ColorFormat::RGBX)
+        .set_color_format(ov::preprocess::ColorFormat::RGBX) 
         //.set_spatial_static_shape(new_input_resolution.height, new_input_resolution.width)
-        .set_shape({1,480,640,4})
-        .set_memory_type(ov::intel_gpu::memory_type::surface);
+        .set_shape({ 1,480,640,4 });
+        //.set_memory_type(ov::intel_gpu::memory_type::surface);
 
 
     ppp.input().preprocess()
         .convert_layout("NCHW")
         .convert_color(ov::preprocess::ColorFormat::RGB)
         .resize(ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR)
-        .convert_element_type(ov::element::f32);
+        .convert_element_type(ov::element::f32)
+        .mean(127.5)
+        .scale(127.5); 
 
     ppp.input().model().set_layout("NCHW");
 
     ppp.output().tensor()
         .set_element_type(ov::element::f32);
 
-    ppp.output().postprocess()
-        .convert_layout("NHWC");
+   /* ppp.output().postprocess()
+        .convert_layout("NHWC");*/
 
     model = ppp.build();
+
+    /* set all nodes as output */
+    
+    for (const auto& op : model->get_ops()) {
+            if (op->get_name() != "Transpose_330") continue;
+            if (!std::dynamic_pointer_cast<ov::opset8::Result>(op) &&
+                !std::dynamic_pointer_cast<ov::opset8::Parameter>(op) &&
+                !std::dynamic_pointer_cast<ov::opset8::VariadicSplit>(op) &&
+                !std::dynamic_pointer_cast<ov::opset8::TopK>(op))
+            {
+                model->add_output(op);
+                std::cout << op->get_name() << std::endl;
+            }
+            
+     }
+
 
     // output [1,3,720,1280]
    
@@ -110,12 +130,76 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, ID3D11
 
     ov::Shape input_shape = { 1, 480, 640 ,4 };
     ov::Shape output_shape = { 1, 720,1280, 3 };
-    auto shared_in_blob = gpu_context.create_tensor(ov::element::u8, input_shape, input_surface);
-    auto shared_output_blob = gpu_context.create_tensor(ov::element::f32, output_shape, output_surface);
+    auto shared_in_blob = gpu_context.create_tensor(ov::element::u8, input_shape, input_buffer);
+    //auto shared_in_blob1 = gpu_context.create_tensor(ov::element::u8, input_shape, input_surface);
+    auto shared_output_blob = gpu_context.create_tensor(ov::element::f32, output_shape, output_buffer);
     infer_request.set_input_tensor(shared_in_blob);
     infer_request.set_output_tensor(shared_output_blob);
     infer_request.infer();
     is_initialized_ = true;
+}
+
+void Cnn::Init(const std::string& model_path, ID3D11Device*& d3d_device, ID3D11Texture2D* input_texture, ID3D11Texture2D* output_texture, const cv::Size& new_input_resolution) {
+    //// ---------------------------------------------------------------------------------------------------
+
+    //// --------------------------- 1. Reading network ----------------------------------------------------
+    ov::Core core;
+
+    auto model = core.read_model(model_path);
+
+
+    ov::preprocess::PrePostProcessor ppp(model);
+
+    ppp.input()
+        .tensor()
+        .set_layout("NHWC")
+        .set_element_type(ov::element::u8)
+        .set_color_format(ov::preprocess::ColorFormat::RGBX)
+        //.set_spatial_static_shape(new_input_resolution.height, new_input_resolution.width)
+        .set_shape({ 1,480,640,4 })
+    .set_memory_type(ov::intel_gpu::memory_type::surface);
+
+
+    ppp.input().preprocess()
+        .convert_layout("NCHW")
+        .convert_color(ov::preprocess::ColorFormat::RGB)
+        .resize(ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR)
+        .convert_element_type(ov::element::f32)
+        .mean(127.5)
+        .scale(127.5);
+
+    ppp.input().model().set_layout("NCHW");
+
+    ppp.output().tensor()
+        .set_element_type(ov::element::u8);
+
+    ppp.output().postprocess()
+        .convert_layout("NHWC");
+
+    model = ppp.build();
+
+    ov::intel_gpu::ocl::D3DContext gpu_context(core, d3d_device);
+
+    remote_context = &gpu_context;
+    auto exec_net_shared = core.compile_model(model, gpu_context); // change device to RemoteContext
+    ov::serialize(exec_net_shared.get_runtime_model(), "test_graph.xml");
+
+
+    auto input = model->get_parameters().at(0);
+    infer_request = exec_net_shared.create_infer_request();
+    //// --------------------------- Creating infer request ------------------------------------------------
+    //infer_request_ = executable_network.CreateInferRequest();
+    //// ---------------------------------------------------------------------------------------------------
+
+    ov::Shape input_shape = { 1, 480, 640 , 4 };
+    ov::Shape output_shape = { 1, 720,1280, 3 };
+    auto shared_in_blob = gpu_context.create_tensor(ov::element::u8, input_shape, input_texture); // 
+    //auto shared_in_blob1 = gpu_context.create_tensor(ov::element::u8, input_shape, input_surface);
+    auto shared_output_blob = gpu_context.create_tensor(ov::element::u8, output_shape, output_texture);
+    infer_request.set_input_tensor(shared_in_blob);
+    infer_request.set_output_tensor(shared_output_blob);
+    infer_request.infer();
+    //is_initialized_ = true;
 }
 
 

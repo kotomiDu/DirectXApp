@@ -217,7 +217,6 @@ public:
         else
         {
             cv::cvtColor(m_frame_bgr, m_frame_rgba, cv::COLOR_BGR2RGBA);
-
             // process video frame on CPU
             UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
 
@@ -244,8 +243,8 @@ public:
     // process and render media data
     int render()
     {
-        try
-        {
+        /*try
+        {*/
             if (m_shutdown)
                 return EXIT_SUCCESS;
 
@@ -334,42 +333,56 @@ public:
                 cv::putText(u, strDevName, cv::Point(0, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
                 //std::cout << u.size().width << ";" << u.size().height << std::endl;
                 cv::directx::convertToD3D11Texture2D(u, pSurface);
+                cv::imwrite("test.png", u);
+
 #if OV_ENABLE
-               //modelcnn.Infer(pSurface);
-                //D3D11_TEXTURE2D_DESC desc_rgb;
-                //desc_rgb.Width = 1280;
-                //desc_rgb.Height = 720;
-                //desc_rgb.MipLevels = 1;
-                //desc_rgb.ArraySize = 1;
-                //desc_rgb.Format = DXGI_FORMAT_R32G32B32_FLOAT;// DXGI_FORMAT_R8G8B8A8_UNORM;//;
-                //desc_rgb.SampleDesc.Count = 1;
-                //desc_rgb.SampleDesc.Quality = 0;
-                //desc_rgb.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-                //desc_rgb.Usage = D3D11_USAGE_DYNAMIC;
-                //desc_rgb.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-                //desc_rgb.MiscFlags = 0;
+                cv::Mat m_temp = cv::imread("test.png");
+                D3D11_BUFFER_DESC inputbufferDesc;
+                inputbufferDesc.ByteWidth = sizeof(m_temp.data);
+                inputbufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+                inputbufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+                inputbufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+                inputbufferDesc.MiscFlags = 0;
+                inputbufferDesc.StructureByteStride = 0;
 
-                ////m_pD3D11Dev->CheckFormatSupport(DXGI_FORMAT_R32G32B32_FLOAT, &support_flag);      
-                //r = m_pD3D11Dev->CreateTexture2D(&desc_rgb, 0, &m_pSurfaceRGB);
-                //if (FAILED(r))
-                //{
-                //    throw std::runtime_error("Can't create DX texture");
-                //}
+                D3D11_SUBRESOURCE_DATA InitData;
+                InitData.pSysMem = m_temp.data;
+                InitData.SysMemPitch = 0;
+                InitData.SysMemSlicePitch = 0;
+                r = m_pD3D11Dev->CreateBuffer(&inputbufferDesc, &InitData, &input_buffer);
 
+                if (FAILED(r))
+                {
+                    throw std::runtime_error("Can't create DX buffer");
+                }
+
+                UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
+
+                D3D11_MAPPED_SUBRESOURCE mappedTex;
+                r = m_pD3D11Ctx->Map(input_buffer, subResource, D3D11_MAP_WRITE_DISCARD, 0, &mappedTex);
+                if (FAILED(r))
+                {
+                    throw std::runtime_error("surface mapping failed!");
+                }
+
+                //input_buffer = (ID3D11Buffer*)pSurface;
                 D3D11_BUFFER_DESC bufferDesc;
-                bufferDesc.ByteWidth = 3*1280*720*4;
+                bufferDesc.ByteWidth = 3 * 1280 * 720 * 4;
                 bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
                 bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
                 bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
                 bufferDesc.MiscFlags = 0;
                 bufferDesc.StructureByteStride = 0;
-                r = m_pD3D11Dev->CreateBuffer(&bufferDesc, NULL, &output_buffer);
+                r = m_pD3D11Dev->CreateBuffer(&bufferDesc, nullptr, &output_buffer);
+
                 if (FAILED(r))
-                    {
-                        throw std::runtime_error("Can't create DX texture");
-                    }
-               modelcnn.Init("models//model_composition_v5_no_padding.xml", m_pD3D11Dev, pSurface, output_buffer, cv::Size(640, 480));
+                {
+                    throw std::runtime_error("Can't create DX texture");
+                }
+                //modelcnn.Init("models//model_composition_v5_no_padding.xml", m_pD3D11Dev, pSurface, output_buffer, cv::Size(640, 480));
+                modelcnn.Init("models//model_composition_v5_no_padding.xml", m_pD3D11Dev, input_buffer, output_buffer, cv::Size(640, 480));
 #endif
+
 
                 if (mode == MODE_GPU_NV12)
                 {
@@ -428,21 +441,21 @@ public:
             {
                 throw std::runtime_error("switch betweem fronat and back buffers failed!");
             }
-        } // try
+        //} // try
 
-        catch (const cv::Exception& e)
-        {
-            std::cerr << "Exception: " << e.what() << std::endl;
-            cleanup();
-            return 10;
-        }
+        //catch (const cv::Exception& e)
+        //{
+        //    std::cerr << "Exception: " << e.what() << std::endl;
+        //    cleanup();
+        //    return 10;
+        //}
 
-        catch (const std::exception& e)
-        {
-            std::cerr << "Exception: " << e.what() << std::endl;
-            cleanup();
-            return 11;
-        }
+        //catch (const std::exception& e)
+        //{
+        //    std::cerr << "Exception: " << e.what() << std::endl;
+        //    cleanup();
+        //    return 11;
+        //}
 
         return EXIT_SUCCESS;
     } // render()
@@ -519,9 +532,10 @@ private:
     IDXGISwapChain*         m_pD3D11SwapChain;
     ID3D11DeviceContext*    m_pD3D11Ctx;
     ID3D11Texture2D*        m_pBackBuffer;
-    ID3D11Texture2D*        m_pSurfaceRGBA;
+    ID3D11Texture2D*        m_pSurfaceRGBA; 
     ID3D11Texture2D*        m_pSurfaceRGB;
-    ID3D11Buffer*           output_buffer;
+    ID3D11Buffer*           output_buffer; 
+    ID3D11Buffer*           input_buffer;
     ID3D11Texture2D*        m_pSurfaceNV12;
     ID3D11Texture2D*        m_pSurfaceNV12_cpu_copy;
     ID3D11RenderTargetView* m_pRenderTarget;
