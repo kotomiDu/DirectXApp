@@ -368,7 +368,7 @@ public:
                     {
                         throw std::runtime_error("Can't create DX texture");
                     }
-               modelcnn.Init("models//model_composition_v5_no_padding.xml", m_pD3D11Dev, pSurface, output_buffer, cv::Size(640, 480));
+               modelcnn.Init("models//model_composition_v5_no_padding.xml", m_pD3D11Dev, m_pSurfaceNV12, output_buffer, cv::Size(640, 480));
 #endif
 
                 if (mode == MODE_GPU_NV12)
