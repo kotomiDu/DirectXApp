@@ -244,8 +244,8 @@ public:
     // process and render media data
     int render()
     {
-        try
-        {
+  /*      try
+        {*/
             if (m_shutdown)
                 return EXIT_SUCCESS;
 
@@ -428,9 +428,9 @@ public:
             {
                 throw std::runtime_error("switch betweem fronat and back buffers failed!");
             }
-        } // try
+        //} // try
 
-        catch (const cv::Exception& e)
+     /*   catch (const cv::Exception& e)
         {
             std::cerr << "Exception: " << e.what() << std::endl;
             cleanup();
@@ -442,7 +442,7 @@ public:
             std::cerr << "Exception: " << e.what() << std::endl;
             cleanup();
             return 11;
-        }
+        }*/
 
         return EXIT_SUCCESS;
     } // render()
