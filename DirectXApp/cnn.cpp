@@ -66,16 +66,16 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, ID3D11
         set_element_type(ov::element::u8).
         set_color_format(ov::preprocess::ColorFormat::NV12_SINGLE_PLANE).
         set_layout("NHWC").
-        set_spatial_static_shape(480, 640).
-        set_memory_type(ov::intel_gpu::memory_type::surface);;
+        set_spatial_static_shape(480, 640);
+        //set_memory_type(ov::intel_gpu::memory_type::surface);
     // 3) Adding explicit preprocessing steps:
     // - convert u8 to f32
     // - convert layout to 'NCHW' (from 'NHWC' specified above at tensor layout)
     ppp.input().preprocess().
         convert_element_type(ov::element::f32).
         convert_color(ov::preprocess::ColorFormat::BGR).
-        convert_layout("NCHW").
-        resize(ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR)
+        resize(ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR).
+        convert_layout("NCHW")
         ; 
 
     ppp.input().model().set_layout("NCHW");
