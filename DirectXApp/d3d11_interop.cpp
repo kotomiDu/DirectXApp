@@ -334,42 +334,6 @@ public:
                 cv::putText(u, strDevName, cv::Point(0, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
                 //std::cout << u.size().width << ";" << u.size().height << std::endl;
                 cv::directx::convertToD3D11Texture2D(u, pSurface);
-#if OV_ENABLE
-               //modelcnn.Infer(pSurface);
-                //D3D11_TEXTURE2D_DESC desc_rgb;
-                //desc_rgb.Width = 1280;
-                //desc_rgb.Height = 720;
-                //desc_rgb.MipLevels = 1;
-                //desc_rgb.ArraySize = 1;
-                //desc_rgb.Format = DXGI_FORMAT_R32G32B32_FLOAT;// DXGI_FORMAT_R8G8B8A8_UNORM;//;
-                //desc_rgb.SampleDesc.Count = 1;
-                //desc_rgb.SampleDesc.Quality = 0;
-                //desc_rgb.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-                //desc_rgb.Usage = D3D11_USAGE_DYNAMIC;
-                //desc_rgb.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-                //desc_rgb.MiscFlags = 0;
-
-                ////m_pD3D11Dev->CheckFormatSupport(DXGI_FORMAT_R32G32B32_FLOAT, &support_flag);      
-                //r = m_pD3D11Dev->CreateTexture2D(&desc_rgb, 0, &m_pSurfaceRGB);
-                //if (FAILED(r))
-                //{
-                //    throw std::runtime_error("Can't create DX texture");
-                //}
-
-                D3D11_BUFFER_DESC bufferDesc;
-                bufferDesc.ByteWidth = 3*1280*720*4;
-                bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-                bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-                bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-                bufferDesc.MiscFlags = 0;
-                bufferDesc.StructureByteStride = 0;
-                r = m_pD3D11Dev->CreateBuffer(&bufferDesc, NULL, &output_buffer);
-                if (FAILED(r))
-                    {
-                        throw std::runtime_error("Can't create DX texture");
-                    }
-               modelcnn.Init("models//model_composition_v5_no_padding.xml", m_pD3D11Dev, m_pSurfaceNV12, output_buffer, cv::Size(640, 480));
-#endif
 
                 if (mode == MODE_GPU_NV12)
                 {
@@ -389,9 +353,25 @@ public:
 
                         cv::Mat frame_nv12(m_height + (m_height / 2), m_width, CV_8UC1, mappedTex.pData, mappedTex.RowPitch);
                         cv::cvtColor(frame_nv12, m_frame_rgba, cv::COLOR_YUV2RGBA_NV12);
-
+                        cv::imwrite("test.png", m_frame_rgba);
                         m_pD3D11Ctx->Unmap(m_pSurfaceNV12_cpu_copy, subResource);
                     }
+
+#if OV_ENABLE
+                    D3D11_BUFFER_DESC bufferDesc;
+                    bufferDesc.ByteWidth = 3 * 1280 * 720 * 4;
+                    bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+                    bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+                    bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+                    bufferDesc.MiscFlags = 0;
+                    bufferDesc.StructureByteStride = 0;
+                    r = m_pD3D11Dev->CreateBuffer(&bufferDesc, NULL, &output_buffer);
+                    if (FAILED(r))
+                    {
+                        throw std::runtime_error("Can't create DX texture");
+                    }
+                    modelcnn.Init("models//model_composition_v5_no_padding.xml", m_pD3D11Dev, m_pSurfaceNV12, output_buffer, cv::Size(640, 480));
+#endif
 
                     {
                         UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
