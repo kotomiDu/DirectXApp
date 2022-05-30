@@ -16,12 +16,12 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/videoio.hpp"
 #include "d3dsample.hpp"
-#include <openvino/runtime/intel_gpu/ocl/dx.hpp>
+
 #if OV_ENABLE
 #include <inference_engine.hpp>
 #include "cnn.hpp"
 #endif
-
+#include "util.h"
 #pragma comment (lib, "d3d11.lib")
 
 
@@ -63,7 +63,7 @@ public:
             NULL,
             D3D_DRIVER_TYPE_HARDWARE,
             NULL,
-            0,
+            D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
             NULL,
             0,
             D3D11_SDK_VERSION,
@@ -123,15 +123,35 @@ public:
         desc_rgba.Format             = DXGI_FORMAT_R8G8B8A8_UNORM;
         desc_rgba.SampleDesc.Count   = 1;
         desc_rgba.SampleDesc.Quality = 0;
-        desc_rgba.BindFlags          = D3D11_BIND_SHADER_RESOURCE;
-        desc_rgba.Usage              = D3D11_USAGE_DYNAMIC;
-        desc_rgba.CPUAccessFlags     = D3D11_CPU_ACCESS_WRITE;
-        desc_rgba.MiscFlags          = 0;
+        desc_rgba.BindFlags = 0;//D3D11_BIND_SHADER_RESOURCE;
+        desc_rgba.Usage = D3D11_USAGE_DEFAULT;// D3D11_USAGE_DYNAMIC;
+        desc_rgba.CPUAccessFlags = 0;//D3D11_CPU_ACCESS_WRITE;
+        desc_rgba.MiscFlags = D3D11_RESOURCE_MISC_SHARED;//0;
 
         r = m_pD3D11Dev->CreateTexture2D(&desc_rgba, 0, &m_pSurfaceRGBA);
         if (FAILED(r))
         {
             throw std::runtime_error("Can't create DX texture");
+        }
+
+        D3D11_TEXTURE2D_DESC desc_rgba_cpu_copy;
+
+        desc_rgba_cpu_copy.Width = m_width;
+        desc_rgba_cpu_copy.Height = m_height;
+        desc_rgba_cpu_copy.MipLevels = 1;
+        desc_rgba_cpu_copy.ArraySize = 1;
+        desc_rgba_cpu_copy.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc_rgba_cpu_copy.SampleDesc.Count = 1;
+        desc_rgba_cpu_copy.SampleDesc.Quality = 0;
+        desc_rgba_cpu_copy.BindFlags = 0;//D3D11_BIND_SHADER_RESOURCE;
+        desc_rgba_cpu_copy.Usage = D3D11_USAGE_STAGING;// D3D11_USAGE_DYNAMIC;
+        desc_rgba_cpu_copy.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        desc_rgba_cpu_copy.MiscFlags = 0;
+
+        r = m_pD3D11Dev->CreateTexture2D(&desc_rgba_cpu_copy, 0, &m_pSurfaceRGBA_cpu_copy);
+        if (FAILED(r))
+        {
+            throw std::runtime_error("Can't create DX NV12 texture");
         }
 
 #if defined(_WIN32_WINNT_WIN8) && _WIN32_WINNT >= _WIN32_WINNT_WIN8
@@ -146,7 +166,7 @@ public:
             desc_nv12.Format             = DXGI_FORMAT_NV12;
             desc_nv12.SampleDesc.Count   = 1;
             desc_nv12.SampleDesc.Quality = 0;
-            desc_nv12.BindFlags          = D3D11_BIND_SHADER_RESOURCE;
+            desc_nv12.BindFlags = D3D11_BIND_RENDER_TARGET;// D3D11_BIND_SHADER_RESOURCE;
             desc_nv12.Usage              = D3D11_USAGE_DEFAULT;
             desc_nv12.CPUAccessFlags     = 0;
             desc_nv12.MiscFlags          = D3D11_RESOURCE_MISC_SHARED;
@@ -217,12 +237,12 @@ public:
         else
         {
             cv::cvtColor(m_frame_bgr, m_frame_rgba, cv::COLOR_BGR2RGBA);
-
+            
             // process video frame on CPU
             UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
 
             D3D11_MAPPED_SUBRESOURCE mappedTex;
-            r = m_pD3D11Ctx->Map(m_pSurfaceRGBA, subResource, D3D11_MAP_WRITE_DISCARD, 0, &mappedTex);
+            r = m_pD3D11Ctx->Map(m_pSurfaceRGBA_cpu_copy, subResource, D3D11_MAP_WRITE, 0, &mappedTex);
             //当需要用CPU读写（GPU的）subresouce（最常用如buffer）时，就用Map()得到该subresource的pointer,将D3D11_MAPPED_SUBRESOURCE::pData强制转换成CPU理解的类型
             if (FAILED(r))
             {
@@ -232,7 +252,8 @@ public:
             cv::Mat m(m_height, m_width, CV_8UC4, mappedTex.pData, mappedTex.RowPitch);
             m_frame_rgba.copyTo(m);
 
-            m_pD3D11Ctx->Unmap(m_pSurfaceRGBA, subResource);
+            m_pD3D11Ctx->Unmap(m_pSurfaceRGBA_cpu_copy, subResource);
+            m_pD3D11Ctx->CopyResource(m_pSurfaceRGBA, m_pSurfaceRGBA_cpu_copy);
         }
 
         *ppSurface = use_nv12 ? m_pSurfaceNV12 : m_pSurfaceRGBA;
@@ -333,9 +354,24 @@ public:
                 cv::putText(u, strTime, cv::Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
                 cv::putText(u, strDevName, cv::Point(0, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
                 //std::cout << u.size().width << ";" << u.size().height << std::endl;
+                cv::imwrite("temp.png", u);
                 cv::directx::convertToD3D11Texture2D(u, pSurface);
+                VidoeProcessor* vp = new VidoeProcessor();
+                vp->m_pD3D11Device = m_pD3D11Dev;
+                vp->m_pD3D11DeviceContext = m_pD3D11Ctx;
+                if (vp)
+                {
+                    r = vp->CreateDX11Device();
+                }
+                else
+                {
+                    return E_FAIL;
+                }
+                vp->VideoProcessorBlt(pSurface, m_pSurfaceNV12);
 
-                if (mode == MODE_GPU_NV12)
+
+
+                if (mode == MODE_GPU_RGBA)
                 {
                     // just for rendering, we need to convert NV12 to RGBA.
                     m_pD3D11Ctx->CopyResource(m_pSurfaceNV12_cpu_copy, m_pSurfaceNV12);
@@ -500,6 +536,7 @@ private:
     ID3D11DeviceContext*    m_pD3D11Ctx;
     ID3D11Texture2D*        m_pBackBuffer;
     ID3D11Texture2D*        m_pSurfaceRGBA;
+    ID3D11Texture2D*        m_pSurfaceRGBA_cpu_copy;
     ID3D11Texture2D*        m_pSurfaceRGB;
     ID3D11Buffer*           output_buffer;
     ID3D11Texture2D*        m_pSurfaceNV12;

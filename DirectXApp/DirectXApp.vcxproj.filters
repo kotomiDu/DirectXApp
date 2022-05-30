@@ -24,6 +24,9 @@
     <ClCompile Include="cnn.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="util.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="d3dsample.hpp">
@@ -34,6 +37,9 @@
     </ClInclude>
     <ClInclude Include="cnn.hpp">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="util.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
