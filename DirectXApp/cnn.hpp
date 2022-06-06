@@ -18,9 +18,9 @@ using namespace InferenceEngine;
 
 class Cnn {
   public:
-    Cnn():is_initialized_(false), channels_(0), time_elapsed_(0), ncalls_(0) {}
+      Cnn() :is_initialized_(false), channels_(0), time_elapsed_(0), ncalls_(0) {};
 
-    void Init(const std::string &model_path,  ID3D11Device*& d3d_device, ID3D11Texture2D* input_surface, ID3D11Buffer* output_surface,
+    void Init(const std::string &model_path,  ID3D11Device*& d3d_device,
               const cv::Size &new_input_resolution = cv::Size());
 
     void Init(const std::string& model_path, ID3D11Device*& d3d_device, cv::Mat input_data);
@@ -32,7 +32,7 @@ class Cnn {
 
     const cv::Size& input_size() const {return input_size_;}
 
-    void Infer(ID3D11Texture2D* surface);
+    void Infer(ID3D11Texture2D* surface, uint8_t* output_data);
 
   private:
     bool is_initialized_;
@@ -45,6 +45,7 @@ class Cnn {
     size_t ncalls_;
 
     ov::InferRequest infer_request;
-    ov::intel_gpu::ocl::D3DContext* remote_context;
+    ov::intel_gpu::ocl::D3DContext remote_context;
+    ov::CompiledModel compile_model;
 
 };

@@ -354,7 +354,7 @@ public:
                 cv::putText(u, strTime, cv::Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
                 cv::putText(u, strDevName, cv::Point(0, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
                 //std::cout << u.size().width << ";" << u.size().height << std::endl;
-                cv::imwrite("temp.png", u);
+                //cv::imwrite("temp.png", u);
                 cv::directx::convertToD3D11Texture2D(u, pSurface);
                 VidoeProcessor* vp = new VidoeProcessor();
                 vp->m_pD3D11Device = m_pD3D11Dev;
@@ -368,8 +368,6 @@ public:
                     return E_FAIL;
                 }
                 vp->VideoProcessorBlt(pSurface, m_pSurfaceNV12);
-
-
 
                 if (mode == MODE_GPU_RGBA)
                 {
@@ -394,19 +392,9 @@ public:
                     }
 
 #if OV_ENABLE
-                    D3D11_BUFFER_DESC bufferDesc;
-                    bufferDesc.ByteWidth = 3 * 1280 * 720 * 4;
-                    bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-                    bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-                    bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-                    bufferDesc.MiscFlags = 0;
-                    bufferDesc.StructureByteStride = 0;
-                    r = m_pD3D11Dev->CreateBuffer(&bufferDesc, NULL, &output_buffer);
-                    if (FAILED(r))
-                    {
-                        throw std::runtime_error("Can't create DX texture");
-                    }
-                    modelcnn.Init("models//model_composition_v5_no_padding.xml", m_pD3D11Dev, m_pSurfaceNV12, output_buffer, cv::Size(640, 480));
+                    modelcnn.Init("models//model_v2.xml", m_pD3D11Dev, cv::Size(640, 480));
+                    uint8_t* output_data = nullptr;
+                    modelcnn.Infer( m_pSurfaceNV12, output_data);
 #endif
 
                     {
