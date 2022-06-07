@@ -754,7 +754,16 @@ namespace StyleTransfer {
             return false;
         }
 
-        printClVector(hdl, 100, cmdQueue );
+        // test
+        /*uint8_t data[100] = {1,2,3,4};
+        cl_int err_flag;
+        cl_mem t = clCreateBuffer(m_env->GetContext(), CL_MEM_READ_WRITE| CL_MEM_USE_HOST_PTR, 100, data, &err_flag);
+        if (err_flag)
+        {
+            std::cout << "erro" << std::endl;
+        }*/
+        // test_end
+        //printClVector(hdl, 640*480*4, cmdQueue );
 
         if (!m_env->EnqueueReleaseSurfaces(&sharedSurfaces[0], sharedSurfaces.size(), false)) {
             return false;
@@ -778,7 +787,10 @@ namespace StyleTransfer {
     void SourceConversion::printClVector(cl_mem& clVector, int length, cl_command_queue& commands, int printrowlen )
     {
         uint8_t* tmp = new uint8_t[length];
-        int err = clEnqueueReadBuffer(commands, clVector, CL_TRUE, 0, sizeof(uint8_t) * length, tmp, 0, NULL, NULL);
+        //int err = clEnqueueReadBuffer(commands, clVector, CL_TRUE, 0, sizeof(uint8_t) * length, tmp, 0, NULL, NULL);
+        size_t origin[3] = {0,0,0};
+        size_t region[3] = {640,480,1};
+        int err = clEnqueueReadImage(commands, clVector, CL_TRUE, origin,region, 0, 0, tmp, 0, NULL, NULL);
         if (err != CL_SUCCESS)
         {
             printf("Error: Failed to read output array! %d\n", err);
@@ -788,7 +800,7 @@ namespace StyleTransfer {
         {
             for (int k = 0; k < length; k++)
             {
-                std::cout << tmp[k] << " ";
+                std::cout <<(int)tmp[k] << " ";
             }
             std::cout << std::endl;
         }

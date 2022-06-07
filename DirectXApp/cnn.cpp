@@ -14,6 +14,7 @@
 #include "openvino/runtime/intel_gpu/properties.hpp"
 #include "openvino/runtime/intel_gpu/ocl/ocl.hpp"
 #include "openvino/runtime/intel_gpu/ocl/dx.hpp"
+#include "openvino/opsets/opset8.hpp"
 
 void Cnn::Init(const std::string& model_path, ID3D11Device*& d3d_device, cv::Mat input_data)
 {
@@ -87,7 +88,18 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, cl_con
 
     model = ppp.build();
 
-    // output [1,3,720,1280]
+    for (const auto& op : model->get_ops()) {
+        if (op->get_name() != "Transpose_455") continue;
+        if (!std::dynamic_pointer_cast<ov::opset8::Result>(op) &&
+            !std::dynamic_pointer_cast<ov::opset8::Parameter>(op) &&
+            !std::dynamic_pointer_cast<ov::opset8::VariadicSplit>(op) &&
+            !std::dynamic_pointer_cast<ov::opset8::TopK>(op))
+        {
+            model->add_output(op);
+            std::cout << op->get_name() << std::endl;
+        }
+
+    }
    
     // --------------------------- Loading model to the device -------------------------------------------
     //auto compile_model = core.compile_model(model,"GPU");
@@ -135,9 +147,26 @@ bool Cnn::Infer(StyleTransfer::SourceConversion& RGBtoRGBfloatKrnl, ID3D11Textur
         return false;
     }
 
-    infer_request.infer();
-
+    // middle output
+    int idx = 0;
     for (auto&& output : compiled_model.outputs()) {
+        const ov::Tensor& output_tensor = infer_request.get_output_tensor(idx);
+        idx++;
+        auto data = output_tensor.data<uint8_t>();
+        auto data_size = output_tensor.get_size();
+        if (idx == 1) {
+            std::cout << std::endl;
+            continue;
+        }
+        for (size_t i = 0; i < data_size; i++) {
+            std::cout << (int)data[i] << " ";
+            i++;
+            if (i > 1280*3) break;
+        }
+        std::cout << std::endl;
+    }
+    //final  output
+    /*for (auto&& output : compiled_model.outputs()) {
         const std::string name = output.get_names().empty() ? "NONE" : output.get_any_name();
         if (name == "NONE")
         {
@@ -152,12 +181,6 @@ bool Cnn::Infer(StyleTransfer::SourceConversion& RGBtoRGBfloatKrnl, ID3D11Textur
         int cols = 1280;
         cv::Mat outputImage(cv::Size(cols, rows), CV_8UC3, data);
         cv::imwrite("styled.png", outputImage);
-        /*std::cout << name.substr(0, name.find(":")) << ": ";
-        for (size_t i = 0; i < data_size; i++) {
-            std::cout << data[i] << " ";
-            if (i > 20) break;
-        }
-        std::cout << std::endl;*/
-    }
+    }*/
 
 }
