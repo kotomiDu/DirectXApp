@@ -13,14 +13,14 @@
 #include "openvino/openvino.hpp"
 #include "openvino/runtime/intel_gpu/ocl/ocl.hpp"
 #include "openvino/runtime/intel_gpu/ocl/dx.hpp"
-
+#include "style_transfer_opencl.h"
 using namespace InferenceEngine;
 
 class Cnn {
   public:
     Cnn():is_initialized_(false), channels_(0), time_elapsed_(0), ncalls_(0) {}
 
-    void Init(const std::string &model_path,  ID3D11Device*& d3d_device, ID3D11Texture2D* input_surface, ID3D11Buffer* output_surface,
+    void Init(const std::string &model_path,  ID3D11Device*& d3d_device, cl_context ctx ,
               const cv::Size &new_input_resolution = cv::Size());
 
     void Init(const std::string& model_path, ID3D11Device*& d3d_device, cv::Mat input_data);
@@ -32,7 +32,7 @@ class Cnn {
 
     const cv::Size& input_size() const {return input_size_;}
 
-    void Infer(ID3D11Texture2D* surface);
+    bool Infer(StyleTransfer::SourceConversion& RGBtoRGBfloatKrnl, ID3D11Texture2D* input_surface);
 
   private:
     bool is_initialized_;
@@ -45,6 +45,10 @@ class Cnn {
     size_t ncalls_;
 
     ov::InferRequest infer_request;
-    ov::intel_gpu::ocl::D3DContext* remote_context;
+    ov::CompiledModel compiled_model;
+    cl::Buffer                          _inputBuffer;
+
+    cl::Buffer                          _outputBuffer;
+    cl::Context							_oclCtx;
 
 };

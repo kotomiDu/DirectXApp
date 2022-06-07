@@ -154,10 +154,12 @@ xcopy $(SolutionDir)third-party\tbb\bin\tbb_debug.dll ..\X64\Debug\  /y</Command
     <ClCompile Include="cnn.cpp" />
     <ClCompile Include="d3d11_interop.cpp" />
     <ClCompile Include="DirectXApp.cpp" />
+    <ClCompile Include="style_transfer_opencl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cnn.hpp" />
     <ClInclude Include="d3dsample.hpp" />
+    <ClInclude Include="style_transfer_opencl.h" />
     <ClInclude Include="winapp.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

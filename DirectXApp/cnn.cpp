@@ -51,7 +51,7 @@ void Cnn::Init(const std::string& model_path, ID3D11Device*& d3d_device, cv::Mat
     infer_request.infer();
 }
 
-void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, ID3D11Texture2D* input_surface, ID3D11Buffer* output_surface, const cv::Size &new_input_resolution) {
+void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, cl_context ctx , const cv::Size &new_input_resolution) {
     //// ---------------------------------------------------------------------------------------------------
 
     //// --------------------------- 1. Reading network ----------------------------------------------------
@@ -62,29 +62,28 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, ID3D11
 
     ov::preprocess::PrePostProcessor ppp(model);
 
-    ppp.input()
-        .tensor()
-        .set_layout("NHWC")
-        .set_element_type(ov::element::u8)
-        .set_color_format(ov::preprocess::ColorFormat::RGBX)
-        //.set_spatial_static_shape(new_input_resolution.height, new_input_resolution.width)
-        .set_shape({1,480,640,4})
-        .set_memory_type(ov::intel_gpu::memory_type::surface);
+    ppp.input().tensor().
+        set_layout("NHWC").
+        set_element_type(ov::element::u8).
+        set_color_format(ov::preprocess::ColorFormat::RGBX).
+        set_shape({ 1,480,640,4 }).
+        set_memory_type(ov::intel_gpu::memory_type::buffer);
 
-
+    // 3) Adding explicit preprocessing steps:
+    // - convert u8 to f32
+    // - convert layout to 'NCHW' (from 'NHWC' specified above at tensor layout)
     ppp.input().preprocess()
-        .convert_layout("NCHW")
         .convert_color(ov::preprocess::ColorFormat::RGB)
+        .convert_layout("NCHW")
         .resize(ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR)
-        .convert_element_type(ov::element::f32);
+        .convert_element_type(ov::element::f32)
+        .mean(127.5)
+        .scale(127.5);
 
     ppp.input().model().set_layout("NCHW");
 
     ppp.output().tensor()
-        .set_element_type(ov::element::f32);
-
-    ppp.output().postprocess()
-        .convert_layout("NHWC");
+        .set_element_type(ov::element::u8);
 
     model = ppp.build();
 
@@ -95,34 +94,70 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, ID3D11
     //auto gpu_context = core.get_default_context("GPU").as<ov::intel_gpu::ocl::ClContext>();
     //// Extract ocl context handle from RemoteContext
     //cl_context context_handle = gpu_context.get();
-    ov::intel_gpu::ocl::D3DContext gpu_context(core, d3d_device);
-
-    remote_context = &gpu_context;
-    auto exec_net_shared = core.compile_model(model, gpu_context); // change device to RemoteContext
-    ov::serialize(exec_net_shared.get_runtime_model(),"test_graph.xml");
+    auto remote_context = ov::intel_gpu::ocl::ClContext(core, ctx);
+    _oclCtx = ctx;
+    compiled_model = core.compile_model(model, remote_context); // change device to RemoteContext
+    ov::serialize(compiled_model.get_runtime_model(),"test_graph.xml");
 
 
     auto input = model->get_parameters().at(0);
-    infer_request = exec_net_shared.create_infer_request();
+    infer_request = compiled_model.create_infer_request();
     //// --------------------------- Creating infer request ------------------------------------------------
     //infer_request_ = executable_network.CreateInferRequest();
     //// ---------------------------------------------------------------------------------------------------
 
-    ov::Shape input_shape = { 1, 480, 640 ,4 };
-    ov::Shape output_shape = { 1, 720,1280, 3 };
-    auto shared_in_blob = gpu_context.create_tensor(ov::element::u8, input_shape, input_surface);
-    auto shared_output_blob = gpu_context.create_tensor(ov::element::f32, output_shape, output_surface);
+    //// Create input and output GPU Blobs
+    int inHeight = 480;
+    int inWidth = 640;
+
+    int outHeight = 720;
+    int outWidth = 1280;
+
+    _inputBuffer = cl::Buffer(_oclCtx, CL_MEM_READ_WRITE, 480 * 640 * 4 * sizeof(uint8_t), NULL, NULL);
+
+    _outputBuffer = cl::Buffer(_oclCtx, CL_MEM_READ_WRITE, 720 * 1280 * 3 * sizeof(uint8_t), NULL, NULL);
+
+    auto shared_in_blob = remote_context.create_tensor(ov::element::u8, {1,480,640,4}, _inputBuffer);
+    //auto shared_output_blob = remote_context.create_tensor(ov::element::u8, {1,720,1280,3}, _outputBuffer);
     infer_request.set_input_tensor(shared_in_blob);
-    infer_request.set_output_tensor(shared_output_blob);
-    infer_request.infer();
+    //infer_request.set_output_tensor(shared_output_blob);
+
     is_initialized_ = true;
 }
 
 
-void Cnn::Infer(ID3D11Texture2D* surface) {
-    ov::Shape input_shape = { 1,640, 480 ,4};
-    auto shared_in_blob = remote_context->create_tensor(ov::element::f32, input_shape, surface);
-    infer_request.set_input_tensor(shared_in_blob);
-    infer_request.infer();
-}
+bool Cnn::Infer(StyleTransfer::SourceConversion& RGBtoRGBfloatKrnl, ID3D11Texture2D* input_surface)
+{
+    if (!RGBtoRGBfloatKrnl.SetArgumentsRGBtoRGBmem(input_surface, _inputBuffer.get(), 640, 480)) {
+        return false;
+    }
+    if (!RGBtoRGBfloatKrnl.Run()) {
+        return false;
+    }
 
+    infer_request.infer();
+
+    for (auto&& output : compiled_model.outputs()) {
+        const std::string name = output.get_names().empty() ? "NONE" : output.get_any_name();
+        if (name == "NONE")
+        {
+            continue;
+        }
+
+        const ov::Tensor& output_tensor = infer_request.get_tensor(name);
+
+        auto data_size = output_tensor.get_size();
+        auto data = output_tensor.data<uint8_t>();
+        int rows = 720;
+        int cols = 1280;
+        cv::Mat outputImage(cv::Size(cols, rows), CV_8UC3, data);
+        cv::imwrite("styled.png", outputImage);
+        /*std::cout << name.substr(0, name.find(":")) << ": ";
+        for (size_t i = 0; i < data_size; i++) {
+            std::cout << data[i] << " ";
+            if (i > 20) break;
+        }
+        std::cout << std::endl;*/
+    }
+
+}

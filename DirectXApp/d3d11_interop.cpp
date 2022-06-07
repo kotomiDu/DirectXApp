@@ -18,6 +18,7 @@
 #include "d3dsample.hpp"
 #include <openvino/runtime/intel_gpu/ocl/dx.hpp>
 #if OV_ENABLE
+#include "style_transfer_opencl.h"
 #include <inference_engine.hpp>
 #include "cnn.hpp"
 #endif
@@ -284,9 +285,6 @@ public:
                 {
                     // blur data from D3D11 surface with OpenCV on CPU
                     cv::blur(m, m, cv::Size(15, 15));
-#if OV_ENABLE
-                    modelcnn.Init("models//model_composition_v5_no_padding.xml", m_pD3D11Dev, m);
-#endif
                 }
 
                 m_timer.stop();
@@ -335,40 +333,21 @@ public:
                 //std::cout << u.size().width << ";" << u.size().height << std::endl;
                 cv::directx::convertToD3D11Texture2D(u, pSurface);
 #if OV_ENABLE
-               //modelcnn.Infer(pSurface);
-                //D3D11_TEXTURE2D_DESC desc_rgb;
-                //desc_rgb.Width = 1280;
-                //desc_rgb.Height = 720;
-                //desc_rgb.MipLevels = 1;
-                //desc_rgb.ArraySize = 1;
-                //desc_rgb.Format = DXGI_FORMAT_R32G32B32_FLOAT;// DXGI_FORMAT_R8G8B8A8_UNORM;//;
-                //desc_rgb.SampleDesc.Count = 1;
-                //desc_rgb.SampleDesc.Quality = 0;
-                //desc_rgb.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-                //desc_rgb.Usage = D3D11_USAGE_DYNAMIC;
-                //desc_rgb.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-                //desc_rgb.MiscFlags = 0;
 
-                ////m_pD3D11Dev->CheckFormatSupport(DXGI_FORMAT_R32G32B32_FLOAT, &support_flag);      
-                //r = m_pD3D11Dev->CreateTexture2D(&desc_rgb, 0, &m_pSurfaceRGB);
-                //if (FAILED(r))
-                //{
-                //    throw std::runtime_error("Can't create DX texture");
-                //}
-
-                D3D11_BUFFER_DESC bufferDesc;
-                bufferDesc.ByteWidth = 3*1280*720*4;
-                bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-                bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-                bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-                bufferDesc.MiscFlags = 0;
-                bufferDesc.StructureByteStride = 0;
-                r = m_pD3D11Dev->CreateBuffer(&bufferDesc, NULL, &output_buffer);
-                if (FAILED(r))
-                    {
-                        throw std::runtime_error("Can't create DX texture");
-                    }
-               modelcnn.Init("models//model_composition_v5_no_padding.xml", m_pD3D11Dev, pSurface, output_buffer, cv::Size(640, 480));
+                StyleTransfer::OCL ocl;
+                if (!ocl.Init()) {
+                    return -1;
+                }
+                StyleTransfer::OCLEnv* oclEnv = ocl.GetEnv(m_pD3D11Dev).get();
+                if (!oclEnv) {
+                    std::cerr << "Failed to get OCL environment for the session" << std::endl;
+                    return -1;
+                }
+ 
+               StyleTransfer::SourceConversion* srcConversionKernel =  new  StyleTransfer::SourceConversion(oclEnv);
+               modelcnn.Init("models//model_v2.xml", m_pD3D11Dev, oclEnv->GetContext(),  cv::Size(640, 480));
+               modelcnn.Infer(*srcConversionKernel, pSurface);
+               
 #endif
 
                 if (mode == MODE_GPU_NV12)
