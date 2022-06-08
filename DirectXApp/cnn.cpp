@@ -15,6 +15,7 @@
 #include "openvino/runtime/intel_gpu/ocl/ocl.hpp"
 #include "openvino/runtime/intel_gpu/ocl/dx.hpp"
 #include "openvino/opsets/opset8.hpp"
+#include <fstream>
 
 void Cnn::Init(const std::string& model_path, ID3D11Device*& d3d_device, cv::Mat input_data)
 {
@@ -147,6 +148,7 @@ bool Cnn::Infer(StyleTransfer::SourceConversion& RGBtoRGBfloatKrnl, ID3D11Textur
         return false;
     }
 
+    infer_request.infer();
     // middle output
     int idx = 0;
     for (auto&& output : compiled_model.outputs()) {
@@ -158,11 +160,16 @@ bool Cnn::Infer(StyleTransfer::SourceConversion& RGBtoRGBfloatKrnl, ID3D11Textur
             std::cout << std::endl;
             continue;
         }
+
+        std::ofstream myfile;
+        myfile.open("log.txt");
         for (size_t i = 0; i < data_size; i++) {
-            std::cout << (int)data[i] << " ";
-            i++;
-            if (i > 1280*3) break;
+            //std::cout << (int)data[i] << " ";
+
+            myfile << (int)data[i] << " ";
+            //if (i > 1280*5) break;
         }
+        myfile.close();
         std::cout << std::endl;
     }
     //final  output

@@ -237,8 +237,9 @@ namespace StyleTransfer {
     private:
         cl_kernel   m_kernelRGBtoRGBbuffer;
         size_t  m_globalWorkSize[2];
-        std::vector<OCLKernelArg*> m_argsRGBtoRGBmem;
+        std::vector<OCLKernelArg*> m_argsRGBtoRGBbuffer;
         OCLKernelArgSharedSurface m_surfRGB;
+        OCLKernelArgSurface m_surfRGBbuffer;
 
     };
 

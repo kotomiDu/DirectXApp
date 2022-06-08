@@ -1,4 +1,4 @@
-__kernel void convertRGBAToRGBfloat(__read_only image2d_t inRGBA, __global uint* dstptr)
+__kernel void convertTest(__read_only image2d_t inRGBA, __global uint* dstptr)
 {
     const int x = get_global_id(0);
     const int y = get_global_id(1);

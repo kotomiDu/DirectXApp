@@ -165,7 +165,7 @@ xcopy $(SolutionDir)third-party\tbb\bin\tbb_debug.dll ..\X64\Debug\  /y</Command
     <ClInclude Include="winapp.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="reorder_data.cl" />
+    <None Include="reorder_data_test.cl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

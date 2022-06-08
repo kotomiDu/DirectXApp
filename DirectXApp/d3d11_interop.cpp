@@ -344,7 +344,7 @@ public:
                     std::cerr << "Failed to get OCL environment for the session" << std::endl;
                     return -1;
                 }
-                StyleTransfer::OCLFilterStore* oclStore = CreateFilterStore(oclEnv, "reorder_data.cl");
+                StyleTransfer::OCLFilterStore* oclStore = CreateFilterStore(oclEnv, "reorder_data_test.cl");
                 StyleTransfer::SourceConversion* srcConversionKernel = dynamic_cast<StyleTransfer::SourceConversion*>(oclStore->CreateKernel("srcConversion"));
                modelcnn.Init("models//model_v2.xml", m_pD3D11Dev, oclEnv->GetContext(),  cv::Size(640, 480));
                modelcnn.Infer(*srcConversionKernel, pSurface);

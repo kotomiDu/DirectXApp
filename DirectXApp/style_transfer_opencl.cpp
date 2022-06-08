@@ -721,7 +721,12 @@ namespace StyleTransfer {
 
     //SourceConversion methods
     SourceConversion::SourceConversion(OCLEnv* env) : OCLKernel(env) {
-        m_argsRGBtoRGBmem.push_back(&m_surfRGB);
+        m_surfRGB.SetIdx(0); 
+        m_argsRGBtoRGBbuffer.push_back(&m_surfRGB);
+
+        m_surfRGBbuffer.SetIdx(1); // kernel argument 1
+        m_argsRGBtoRGBbuffer.push_back(&m_surfRGBbuffer);
+
     }
 
     SourceConversion::~SourceConversion() {
@@ -731,7 +736,7 @@ namespace StyleTransfer {
     bool SourceConversion::Create(cl_program program) {
         cl_int error = CL_SUCCESS;
 
-        m_kernelRGBtoRGBbuffer = clCreateKernel(program, "convertRGBAToRGBfloat", &error);
+        m_kernelRGBtoRGBbuffer = clCreateKernel(program, "convertTest", &error);
         if (error) {
             std::cerr << "OpenCLFilter: clCreateKernel failed. Error code: " << error << std::endl;
             return false;
@@ -739,11 +744,14 @@ namespace StyleTransfer {
         return true;
     }
     bool SourceConversion::SetArgumentsRGBtoRGBmem(ID3D11Texture2D* in_rgbSurf, cl_mem out_rgbSurf, int cols, int rows){
-        out_rgbSurf = m_env->CreateSharedSurface(in_rgbSurf, 0, true); //rgb surface only has one view,default as 0
-        if (!out_rgbSurf) {
+        cl_mem out_hdlRGB = m_env->CreateSharedSurface(in_rgbSurf, 0, true); //rgb surface only has one view,default as 0
+        if (!out_hdlRGB) {
             return false;
         }
-        m_surfRGB.SetHDL(out_rgbSurf);
+
+        m_surfRGB.SetHDL(out_hdlRGB);
+
+        m_surfRGBbuffer.SetHDL(out_rgbSurf);
 
         m_globalWorkSize[0] = cols / 2;
         m_globalWorkSize[1] = rows / 2;
@@ -751,8 +759,19 @@ namespace StyleTransfer {
     }
     bool SourceConversion::Run() {
         std::vector<cl_mem> sharedSurfaces;
-        cl_mem hdl = dynamic_cast<OCLKernelArgSharedSurface*>(m_argsRGBtoRGBmem[0])->GetHDL();
-        sharedSurfaces.push_back(hdl);
+        std::vector<OCLKernelArg*>& args = m_argsRGBtoRGBbuffer;
+        cl_kernel& kernel = m_kernelRGBtoRGBbuffer;
+
+        for (int i = 0; i < args.size(); i++) {
+            if (!(args[i]->Set(kernel))) {
+                return false;
+            }
+
+            if (args[i]->Type() == OCLKernelArg::OCL_KERNEL_ARG_SHARED_SURFACE) {
+                cl_mem hdl = dynamic_cast<OCLKernelArgSharedSurface*>(args[i])->GetHDL();
+                sharedSurfaces.push_back(hdl);
+            }
+        }
 
         cl_int error = CL_SUCCESS;
         cl_command_queue cmdQueue = m_env->GetCommandQueue();
@@ -760,13 +779,13 @@ namespace StyleTransfer {
             return false;
         }
 
-        error = clEnqueueNDRangeKernel(cmdQueue, m_kernelRGBtoRGBbuffer, 2, NULL, m_globalWorkSize, NULL, 0, NULL, NULL);
-        if (error) {
-            std::cerr << "clEnqueueNDRangeKernel failed. Error code: " << error << std::endl;
+        if (!m_env->EnqueueAcquireSurfaces(&sharedSurfaces[0], sharedSurfaces.size(), false)) {
             return false;
         }
 
-        if (!m_env->EnqueueAcquireSurfaces(&sharedSurfaces[0], sharedSurfaces.size(), false)) {
+        error = clEnqueueNDRangeKernel(cmdQueue, kernel, 2, NULL, m_globalWorkSize, NULL, 0, NULL, NULL);
+        if (error) {
+            std::cerr << "clEnqueueNDRangeKernel failed. Error code: " << error << std::endl;
             return false;
         }
 

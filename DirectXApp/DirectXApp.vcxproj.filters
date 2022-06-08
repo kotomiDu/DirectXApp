@@ -49,7 +49,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="reorder_data.cl">
+    <None Include="reorder_data_test.cl">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
