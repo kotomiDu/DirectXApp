@@ -27,6 +27,9 @@
     <ClCompile Include="style_transfer_opencl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="style_transfer_util.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="d3dsample.hpp">
@@ -41,5 +44,13 @@
     <ClInclude Include="style_transfer_opencl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="style_transfer_util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="reorder_data.cl">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

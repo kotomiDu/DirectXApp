@@ -729,6 +729,13 @@ namespace StyleTransfer {
     }
 
     bool SourceConversion::Create(cl_program program) {
+        cl_int error = CL_SUCCESS;
+
+        m_kernelRGBtoRGBbuffer = clCreateKernel(program, "convertRGBAToRGBfloat", &error);
+        if (error) {
+            std::cerr << "OpenCLFilter: clCreateKernel failed. Error code: " << error << std::endl;
+            return false;
+        }
         return true;
     }
     bool SourceConversion::SetArgumentsRGBtoRGBmem(ID3D11Texture2D* in_rgbSurf, cl_mem out_rgbSurf, int cols, int rows){
@@ -737,6 +744,9 @@ namespace StyleTransfer {
             return false;
         }
         m_surfRGB.SetHDL(out_rgbSurf);
+
+        m_globalWorkSize[0] = cols / 2;
+        m_globalWorkSize[1] = rows / 2;
         return true;
     }
     bool SourceConversion::Run() {
@@ -747,6 +757,12 @@ namespace StyleTransfer {
         cl_int error = CL_SUCCESS;
         cl_command_queue cmdQueue = m_env->GetCommandQueue();
         if (!cmdQueue) {
+            return false;
+        }
+
+        error = clEnqueueNDRangeKernel(cmdQueue, m_kernelRGBtoRGBbuffer, 2, NULL, m_globalWorkSize, NULL, 0, NULL, NULL);
+        if (error) {
+            std::cerr << "clEnqueueNDRangeKernel failed. Error code: " << error << std::endl;
             return false;
         }
 
@@ -844,6 +860,12 @@ namespace StyleTransfer {
         }
         else if (name == "copyMakeBorder") {
             kernel = new CopyMakeBorder(m_env);
+            if (!kernel->Create(m_program.GetHDL())) {
+                delete kernel;
+                kernel = nullptr;
+            }
+        }else if (name == "srcConversion") {
+            kernel = new SourceConversion(m_env);
             if (!kernel->Create(m_program.GetHDL())) {
                 delete kernel;
                 kernel = nullptr;

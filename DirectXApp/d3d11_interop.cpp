@@ -19,6 +19,7 @@
 #include <openvino/runtime/intel_gpu/ocl/dx.hpp>
 #if OV_ENABLE
 #include "style_transfer_opencl.h"
+#include "style_transfer_util.h"
 #include <inference_engine.hpp>
 #include "cnn.hpp"
 #endif
@@ -343,8 +344,8 @@ public:
                     std::cerr << "Failed to get OCL environment for the session" << std::endl;
                     return -1;
                 }
- 
-               StyleTransfer::SourceConversion* srcConversionKernel =  new  StyleTransfer::SourceConversion(oclEnv);
+                StyleTransfer::OCLFilterStore* oclStore = CreateFilterStore(oclEnv, "reorder_data.cl");
+                StyleTransfer::SourceConversion* srcConversionKernel = dynamic_cast<StyleTransfer::SourceConversion*>(oclStore->CreateKernel("srcConversion"));
                modelcnn.Init("models//model_v2.xml", m_pD3D11Dev, oclEnv->GetContext(),  cv::Size(640, 480));
                modelcnn.Infer(*srcConversionKernel, pSurface);
                
