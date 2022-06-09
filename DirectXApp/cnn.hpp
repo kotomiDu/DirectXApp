@@ -32,7 +32,7 @@ class Cnn {
 
     const cv::Size& input_size() const {return input_size_;}
 
-    bool Infer(StyleTransfer::SourceConversion& RGBtoRGBfloatKrnl, ID3D11Texture2D* input_surface);
+    bool Infer(StyleTransfer::SourceConversion& RGBtoRGBfloatKrnl, ID3D11Texture2D* input_surface, ID3D11Texture2D* output_surface);
 
   private:
     bool is_initialized_;

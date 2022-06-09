@@ -2,6 +2,7 @@
 
 #include <thread>
 #include <iostream>
+#include <fstream>
 
 #define MAX_PLATFORMS       32
 #define MAX_STRING_SIZE     1024
@@ -723,9 +724,20 @@ namespace StyleTransfer {
     SourceConversion::SourceConversion(OCLEnv* env) : OCLKernel(env) {
         m_surfRGB.SetIdx(0); 
         m_argsRGBtoRGBbuffer.push_back(&m_surfRGB);
+        m_argsRGBbuffertoRGBA.push_back(&m_surfRGB);
 
         m_surfRGBbuffer.SetIdx(1); // kernel argument 1
         m_argsRGBtoRGBbuffer.push_back(&m_surfRGBbuffer);
+        m_argsRGBbuffertoRGBA.push_back(&m_surfRGBbuffer);
+
+        m_cols.SetIdx(2); // both kernels argument 2
+        m_argsRGBtoRGBbuffer.push_back(&m_cols);
+        m_argsRGBbuffertoRGBA.push_back(&m_cols);
+  
+
+        m_channelSz.SetIdx(3); // both kernels argument 3
+        m_argsRGBtoRGBbuffer.push_back(&m_channelSz);
+        m_argsRGBbuffertoRGBA.push_back(&m_channelSz);
 
     }
 
@@ -736,7 +748,8 @@ namespace StyleTransfer {
     bool SourceConversion::Create(cl_program program) {
         cl_int error = CL_SUCCESS;
 
-        m_kernelRGBtoRGBbuffer = clCreateKernel(program, "convertTest", &error);
+        m_kernelRGBtoRGBbuffer = clCreateKernel(program, "convertARGBU8ToRGBint", &error);
+        m_kernelRGBbuffertoRGBA = clCreateKernel(program, "convertRGBintToARGB", &error);
         if (error) {
             std::cerr << "OpenCLFilter: clCreateKernel failed. Error code: " << error << std::endl;
             return false;
@@ -753,15 +766,44 @@ namespace StyleTransfer {
 
         m_surfRGBbuffer.SetHDL(out_rgbSurf);
 
-        m_globalWorkSize[0] = cols / 2;
-        m_globalWorkSize[1] = rows / 2;
+
+        m_cols.SetVal(cols);
+        m_channelSz.SetVal(cols * rows);
+
+        m_globalWorkSize[0] = cols ;
+        m_globalWorkSize[1] = rows ;
+
+        m_RGBToRGBbuffer = true;
         return true;
     }
+
+
+    bool SourceConversion::SetArgumentsRGBbuffertoRGBA(cl_mem in_rgbSurf, ID3D11Texture2D* out_rgbSurf, int cols, int rows) {
+        cl_mem out_hdlRGB = m_env->CreateSharedSurface(out_rgbSurf, 0, false); //rgb surface only has one view,default as 0
+        if (!out_hdlRGB) {
+            return false;
+        }
+
+        m_surfRGB.SetHDL(out_hdlRGB);
+
+        m_surfRGBbuffer.SetHDL(in_rgbSurf);
+
+
+        m_cols.SetVal(cols);
+        m_channelSz.SetVal(cols * rows);
+
+        m_globalWorkSize[0] = cols;
+        m_globalWorkSize[1] = rows;
+
+        m_RGBToRGBbuffer = false;
+        return true;
+    }
+
     bool SourceConversion::Run() {
         std::vector<cl_mem> sharedSurfaces;
-        std::vector<OCLKernelArg*>& args = m_argsRGBtoRGBbuffer;
-        cl_kernel& kernel = m_kernelRGBtoRGBbuffer;
-
+        std::vector<OCLKernelArg*>& args = m_RGBToRGBbuffer ? m_argsRGBtoRGBbuffer:m_argsRGBbuffertoRGBA;
+        cl_kernel& kernel = m_RGBToRGBbuffer ? m_kernelRGBtoRGBbuffer:m_kernelRGBbuffertoRGBA;
+        cl_mem input;
         for (int i = 0; i < args.size(); i++) {
             if (!(args[i]->Set(kernel))) {
                 return false;
@@ -770,6 +812,11 @@ namespace StyleTransfer {
             if (args[i]->Type() == OCLKernelArg::OCL_KERNEL_ARG_SHARED_SURFACE) {
                 cl_mem hdl = dynamic_cast<OCLKernelArgSharedSurface*>(args[i])->GetHDL();
                 sharedSurfaces.push_back(hdl);
+            }
+
+            if (args[i]->Type() == OCLKernelArg::OCL_KERNEL_ARG_SURFACE)
+            {
+                input = dynamic_cast<OCLKernelArgSurface*>(args[i])->GetHDL();
             }
         }
 
@@ -798,7 +845,11 @@ namespace StyleTransfer {
             std::cout << "erro" << std::endl;
         }*/
         // test_end
-        //printClVector(hdl, 640*480*4, cmdQueue );
+        if (!m_RGBToRGBbuffer) {
+            printClVector(sharedSurfaces[0], 1280 * 720 * 4, cmdQueue);
+            //printClVector(input, 1280 * 720 * 3, cmdQueue);
+        }
+        
 
         if (!m_env->EnqueueReleaseSurfaces(&sharedSurfaces[0], sharedSurfaces.size(), false)) {
             return false;
@@ -824,7 +875,7 @@ namespace StyleTransfer {
         uint8_t* tmp = new uint8_t[length];
         //int err = clEnqueueReadBuffer(commands, clVector, CL_TRUE, 0, sizeof(uint8_t) * length, tmp, 0, NULL, NULL);
         size_t origin[3] = {0,0,0};
-        size_t region[3] = {640,480,1};
+        size_t region[3] = { 1280,720,1 };
         int err = clEnqueueReadImage(commands, clVector, CL_TRUE, origin,region, 0, 0, tmp, 0, NULL, NULL);
         if (err != CL_SUCCESS)
         {
@@ -833,11 +884,15 @@ namespace StyleTransfer {
         }
         if (printrowlen < 0)	// print all as one line
         {
-            for (int k = 0; k < length; k++)
-            {
-                std::cout <<(int)tmp[k] << " ";
+            std::ofstream myfile;
+            myfile.open("log.txt", std::ios::out | std::ios::binary);
+            for (size_t i = 0; i < length; i++) {
+                //std::cout << (int)data[i] << " ";
+                myfile << tmp[i];
+                //myfile << (int)data[i] << " ";
+                //if (i > 1280*5) break;
             }
-            std::cout << std::endl;
+            myfile.close();
         }
         else				// print rows of "printrowlen" length
         {

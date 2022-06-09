@@ -233,13 +233,21 @@ namespace StyleTransfer {
         virtual bool Run();
 
         bool SetArgumentsRGBtoRGBmem(ID3D11Texture2D* in_nv12Surf, cl_mem out_rgbSurf, int cols, int rows);
+        bool SetArgumentsRGBbuffertoRGBA(cl_mem in_rgbSurf, ID3D11Texture2D* out_rgbSurf, int cols, int rows);
         void printClVector(cl_mem& clVector, int length, cl_command_queue& commands, int printrowlen = -1);
     private:
         cl_kernel   m_kernelRGBtoRGBbuffer;
+        cl_kernel   m_kernelRGBbuffertoRGBA;
+
+        bool m_RGBToRGBbuffer;
         size_t  m_globalWorkSize[2];
         std::vector<OCLKernelArg*> m_argsRGBtoRGBbuffer;
+        std::vector<OCLKernelArg*> m_argsRGBbuffertoRGBA;
         OCLKernelArgSharedSurface m_surfRGB;
         OCLKernelArgSurface m_surfRGBbuffer;
+
+        OCLKernelArgInt m_cols;
+        OCLKernelArgInt m_channelSz;
 
     };
 
