@@ -1,14 +1,47 @@
-__kernel void convertTest(__read_only image2d_t inRGBA, __global uint* dstptr)
+__kernel void convertARGBU8ToRGBint(__read_only image2d_t inARGB, __global char * dstptr, int dst_cols, int channelSz)
 {
-    const int x = get_global_id(0);
-    const int y = get_global_id(1);
+int i = get_global_id(0); // range [0, width]
+int j = get_global_id(1); // range [0, height]
 
-    unsigned int gid = get_global_id(0);
+const sampler_t smp = CLK_FILTER_NEAREST | CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE;
 
-    const int2 srcCoord = (int2)(x, y);
+float4 bgr = read_imagef(inARGB, smp, (int2)(i, j)).xyzw;
 
-    const uint4 c = read_imageui(inRGBA, srcCoord);
+// Note: BGR
+__global char* pB = dstptr + dst_cols * j + i;
+__global char* pG = pB + channelSz;
+__global char* pR = pG + channelSz;
 
-    vstore4(c, gid, dstptr);
+*pR = bgr.z * 255;
+*pG = bgr.y * 255;
+*pB = bgr.x * 255;
 }
 
+
+
+__kernel void convertRGBintToARGB(__write_only image2d_t outARGB, __global uchar * srcptr,  int dst_cols, int channelSz)
+{
+int i = get_global_id(0); // range [0, width]
+int j = get_global_id(1); // range [0, height]
+
+
+// Note: BGR
+//__global char* pB = srcptr + dst_cols * j + i;
+//__global char* pG = pB + channelSz;
+//__global char* pR = pG + channelSz;
+
+// Note: BGR
+__global uchar* pR = srcptr + dst_cols * j * 3+ i*3; 
+__global uchar* pG = srcptr + dst_cols * j * 3+ i*3+1;
+__global uchar* pB = srcptr + dst_cols * j * 3+ i*3+2;
+
+float4 rgba;
+
+rgba.x = *pR * (1.0f / 255.0f);
+rgba.y = *pG * (1.0f / 255.0f);
+rgba.z = *pB * (1.0f / 255.0f);
+rgba.w = 0;
+//rgba.w = 1;  //for png output
+
+write_imagef(outARGB, (int2)(i, j), rgba);
+}

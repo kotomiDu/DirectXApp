@@ -141,7 +141,7 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, cl_con
 
 bool Cnn::Infer(StyleTransfer::SourceConversion& srcConversionKrnl, ID3D11Texture2D* input_surface, ID3D11Texture2D* output_surface)
 {
-    if (!srcConversionKrnl.SetArgumentsRGBtoRGBmem(input_surface, _inputBuffer.get(), 640, 480)) {
+    if (!srcConversionKrnl.SetArgumentsRGBtoRGBbuffer(input_surface, _inputBuffer.get(), 640, 480)) {
         return false;
     }
     if (!srcConversionKrnl.Run()) {

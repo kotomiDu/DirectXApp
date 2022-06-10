@@ -16,7 +16,6 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/videoio.hpp"
 #include "d3dsample.hpp"
-#include <openvino/runtime/intel_gpu/ocl/dx.hpp>
 #if OV_ENABLE
 #include "style_transfer_opencl.h"
 #include "style_transfer_util.h"
@@ -136,26 +135,6 @@ public:
             throw std::runtime_error("Can't create DX texture");
         }
 
-        D3D11_TEXTURE2D_DESC desc_ovrgba;
-
-        desc_ovrgba.Width = 1280;
-        desc_ovrgba.Height = 720;
-        desc_ovrgba.MipLevels = 1;
-        desc_ovrgba.ArraySize = 1;
-        desc_ovrgba.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        desc_ovrgba.SampleDesc.Count = 1;
-        desc_ovrgba.SampleDesc.Quality = 0;
-        desc_ovrgba.BindFlags = 0;
-        desc_ovrgba.Usage = D3D11_USAGE_STAGING;
-        desc_ovrgba.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
-        desc_ovrgba.MiscFlags = 0;
-
-        r = m_pD3D11Dev->CreateTexture2D(&desc_ovrgba, 0, &m_ovSurfaceRGBA);
-        if (FAILED(r))
-        {
-            throw std::runtime_error("Can't create DX texture");
-        }
-
 #if defined(_WIN32_WINNT_WIN8) && _WIN32_WINNT >= _WIN32_WINNT_WIN8
         if(m_nv12_available)
         {
@@ -210,10 +189,63 @@ public:
         m_oclDevName = cv::ocl::useOpenCL() ?
             cv::ocl::Context::getDefault().device(0).name() :
             "No OpenCL device";
-
-       
 #if OV_ENABLE
-       // modelcnn.Init("models//model_composition_v5_no_padding.xml",  m_pD3D11Dev, cv::Size(640, 480));
+        D3D11_TEXTURE2D_DESC desc_ovrgba;
+
+        desc_ovrgba.Width = 1280;
+        desc_ovrgba.Height = 720;
+        desc_ovrgba.MipLevels = 1;
+        desc_ovrgba.ArraySize = 1;
+        desc_ovrgba.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc_ovrgba.SampleDesc.Count = 1;
+        desc_ovrgba.SampleDesc.Quality = 0;
+        desc_ovrgba.BindFlags = 0;
+        desc_ovrgba.Usage = D3D11_USAGE_DEFAULT;
+        desc_ovrgba.CPUAccessFlags = 0;// D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
+        desc_ovrgba.MiscFlags = 0;
+
+
+        r = m_pD3D11Dev->CreateTexture2D(&desc_ovrgba, 0, &m_ovSurfaceRGBA);
+        if (FAILED(r))
+        {
+            throw std::runtime_error("Can't create DX texture");
+        }
+
+        D3D11_TEXTURE2D_DESC desc_ovrgba_copy;
+
+        desc_ovrgba_copy.Width = 1280;
+        desc_ovrgba_copy.Height = 720;
+        desc_ovrgba_copy.MipLevels = 1;
+        desc_ovrgba_copy.ArraySize = 1;
+        desc_ovrgba_copy.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc_ovrgba_copy.SampleDesc.Count = 1;
+        desc_ovrgba_copy.SampleDesc.Quality = 0;
+        desc_ovrgba_copy.BindFlags = 0;
+        desc_ovrgba_copy.Usage = D3D11_USAGE_STAGING;
+        desc_ovrgba_copy.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+        desc_ovrgba_copy.MiscFlags = 0;
+
+        r = m_pD3D11Dev->CreateTexture2D(&desc_ovrgba_copy, 0, &m_ovSurfaceRGBA_cpu_copy);
+        if (FAILED(r))
+        {
+            throw std::runtime_error("Can't create DX texture");
+        }
+#endif
+
+#if OV_ENABLE
+        if (!ocl.Init()) {
+            return -1;
+        }
+        oclEnv = ocl.GetEnv(m_pD3D11Dev).get();
+        if (!oclEnv) {
+            std::cerr << "Failed to get OCL environment for the session" << std::endl;
+            return -1;
+        }
+
+      oclStore = CreateFilterStore(oclEnv, "reorder_data_test.cl");
+     srcConversionKernel = dynamic_cast<StyleTransfer::SourceConversion*>(oclStore->CreateKernel("srcConversion"));
+        modelcnn.Init("models//model_v2.xml", m_pD3D11Dev, oclEnv->GetContext(), cv::Size(640, 480));
+        
 #endif
 
         return EXIT_SUCCESS;
@@ -353,27 +385,14 @@ public:
                 cv::putText(u, strDevName, cv::Point(0, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
                 //std::cout << u.size().width << ";" << u.size().height << std::endl;
                 cv::directx::convertToD3D11Texture2D(u, pSurface);
-                cv::imwrite("test.png", u);
+
 #if OV_ENABLE
-
-                StyleTransfer::OCL ocl;
-                if (!ocl.Init()) {
-                    return -1;
-                }
-                StyleTransfer::OCLEnv* oclEnv = ocl.GetEnv(m_pD3D11Dev).get();
-                if (!oclEnv) {
-                    std::cerr << "Failed to get OCL environment for the session" << std::endl;
-                    return -1;
-                }
-                StyleTransfer::OCLFilterStore* oclStore = CreateFilterStore(oclEnv, "reorder_data_test.cl");
-                StyleTransfer::SourceConversion* srcConversionKernel = dynamic_cast<StyleTransfer::SourceConversion*>(oclStore->CreateKernel("srcConversion"));
-               modelcnn.Init("models//model_v2.xml", m_pD3D11Dev, oclEnv->GetContext(),  cv::Size(640, 480));
                modelcnn.Infer(*srcConversionKernel, pSurface, m_ovSurfaceRGBA);
-               
-               UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
+               m_pD3D11Ctx->CopyResource(m_ovSurfaceRGBA_cpu_copy, m_ovSurfaceRGBA);
 
+               UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
                D3D11_MAPPED_SUBRESOURCE mappedTex;
-               r = m_pD3D11Ctx->Map(m_ovSurfaceRGBA, subResource, D3D11_MAP_READ, 0, &mappedTex);
+               r = m_pD3D11Ctx->Map(m_ovSurfaceRGBA_cpu_copy, subResource, D3D11_MAP_READ, 0, &mappedTex);
                if (FAILED(r))
                {
                    throw std::runtime_error("surface mapping failed!");
@@ -381,8 +400,6 @@ public:
 
                cv::Mat m(720, 1280, CV_8UC4, mappedTex.pData, mappedTex.RowPitch);
                cv::imwrite("cl_test.png", m);
-
-
 #endif
 
                 if (mode == MODE_GPU_NV12)
@@ -535,8 +552,6 @@ private:
     ID3D11Texture2D*        m_pBackBuffer;
     ID3D11Texture2D*        m_pSurfaceRGBA;
     ID3D11Texture2D*        m_pSurfaceRGB;
-    ID3D11Texture2D*        m_ovSurfaceRGBA;
-    ID3D11Buffer*           output_buffer;
     ID3D11Texture2D*        m_pSurfaceNV12;
     ID3D11Texture2D*        m_pSurfaceNV12_cpu_copy;
     ID3D11RenderTargetView* m_pRenderTarget;
@@ -547,7 +562,12 @@ private:
     cv::Mat                 m_frame_i420;
     cv::Mat                 m_frame_nv12;
 #if OV_ENABLE
-    ov::Core                    *core;
+    ID3D11Texture2D*         m_ovSurfaceRGBA;
+    ID3D11Texture2D*         m_ovSurfaceRGBA_cpu_copy;
+    StyleTransfer::OCL       ocl;
+    StyleTransfer::OCLEnv*   oclEnv;
+    StyleTransfer::OCLFilterStore* oclStore;
+    StyleTransfer::SourceConversion* srcConversionKernel;
     Cnn                     modelcnn;
 #endif
 };

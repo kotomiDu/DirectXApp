@@ -756,13 +756,13 @@ namespace StyleTransfer {
         }
         return true;
     }
-    bool SourceConversion::SetArgumentsRGBtoRGBmem(ID3D11Texture2D* in_rgbSurf, cl_mem out_rgbSurf, int cols, int rows){
-        cl_mem out_hdlRGB = m_env->CreateSharedSurface(in_rgbSurf, 0, true); //rgb surface only has one view,default as 0
-        if (!out_hdlRGB) {
+    bool SourceConversion::SetArgumentsRGBtoRGBbuffer(ID3D11Texture2D* in_rgbSurf, cl_mem out_rgbSurf, int cols, int rows){
+        cl_mem in_hdlRGB = m_env->CreateSharedSurface(in_rgbSurf, 0, true); //rgb surface only has one view,default as 0
+        if (!in_hdlRGB) {
             return false;
         }
 
-        m_surfRGB.SetHDL(out_hdlRGB);
+        m_surfRGB.SetHDL(in_hdlRGB);
 
         m_surfRGBbuffer.SetHDL(out_rgbSurf);
 
@@ -845,10 +845,10 @@ namespace StyleTransfer {
             std::cout << "erro" << std::endl;
         }*/
         // test_end
-        if (!m_RGBToRGBbuffer) {
-            printClVector(sharedSurfaces[0], 1280 * 720 * 4, cmdQueue);
-            //printClVector(input, 1280 * 720 * 3, cmdQueue);
-        }
+        //if (!m_RGBToRGBbuffer) {
+          //  printClVector(sharedSurfaces[0], 1280 * 720 * 4, cmdQueue);
+        //    //printClVector(input, 1280 * 720 * 3, cmdQueue);
+        //}
         
 
         if (!m_env->EnqueueReleaseSurfaces(&sharedSurfaces[0], sharedSurfaces.size(), false)) {
