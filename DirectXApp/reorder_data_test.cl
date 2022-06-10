@@ -26,9 +26,9 @@ int j = get_global_id(1); // range [0, height]
 
 
 // Note: BGR
-__global uchar* pB = srcptr + dst_cols * j + i;
-__global uchar* pG = pB + channelSz;
-__global uchar* pR = pG + channelSz;
+__global uchar* pR = srcptr + dst_cols * j + i;
+__global uchar* pG = pR + channelSz;
+__global uchar* pB = pG + channelSz;
 
 // Note: BGR
 //__global uchar* pR = srcptr + dst_cols * j * 3+ i*3; 

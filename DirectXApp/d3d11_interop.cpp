@@ -387,7 +387,8 @@ public:
 
 #if OV_ENABLE
                modelcnn.Infer(*srcConversionKernel, pSurface, m_ovSurfaceRGBA, cv::Size(m_width, m_height));
-               m_pD3D11Ctx->CopyResource(m_ovSurfaceRGBA_cpu_copy, m_ovSurfaceRGBA);
+               pSurface = m_ovSurfaceRGBA;
+            /*   m_pD3D11Ctx->CopyResource(m_ovSurfaceRGBA_cpu_copy, m_ovSurfaceRGBA);
 
                UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
                D3D11_MAPPED_SUBRESOURCE mappedTex;
@@ -398,7 +399,7 @@ public:
                }
 
                cv::Mat m(m_height, m_width, CV_8UC4, mappedTex.pData, mappedTex.RowPitch);
-               cv::imwrite("cl_test.png", m);
+               cv::imwrite("cl_test.png", m);*/
 #endif
 
                 if (mode == MODE_GPU_NV12)
