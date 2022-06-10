@@ -26,22 +26,22 @@ int j = get_global_id(1); // range [0, height]
 
 
 // Note: BGR
-//__global char* pB = srcptr + dst_cols * j + i;
-//__global char* pG = pB + channelSz;
-//__global char* pR = pG + channelSz;
+__global uchar* pB = srcptr + dst_cols * j + i;
+__global uchar* pG = pB + channelSz;
+__global uchar* pR = pG + channelSz;
 
 // Note: BGR
-__global uchar* pR = srcptr + dst_cols * j * 3+ i*3; 
-__global uchar* pG = srcptr + dst_cols * j * 3+ i*3+1;
-__global uchar* pB = srcptr + dst_cols * j * 3+ i*3+2;
+//__global uchar* pR = srcptr + dst_cols * j * 3+ i*3; 
+//__global uchar* pG = srcptr + dst_cols * j * 3+ i*3+1;
+//__global uchar* pB = srcptr + dst_cols * j * 3+ i*3+2;
 
 float4 rgba;
 
 rgba.x = *pR * (1.0f / 255.0f);
 rgba.y = *pG * (1.0f / 255.0f);
 rgba.z = *pB * (1.0f / 255.0f);
-rgba.w = 0;
-//rgba.w = 1;  //for png output
+//rgba.w = 0;
+rgba.w = 1;  //for png output
 
 write_imagef(outARGB, (int2)(i, j), rgba);
 }

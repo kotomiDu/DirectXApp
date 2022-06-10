@@ -192,8 +192,8 @@ public:
 #if OV_ENABLE
         D3D11_TEXTURE2D_DESC desc_ovrgba;
 
-        desc_ovrgba.Width = 1280;
-        desc_ovrgba.Height = 720;
+        desc_ovrgba.Width = m_width;
+        desc_ovrgba.Height = m_height;
         desc_ovrgba.MipLevels = 1;
         desc_ovrgba.ArraySize = 1;
         desc_ovrgba.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -204,7 +204,6 @@ public:
         desc_ovrgba.CPUAccessFlags = 0;// D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
         desc_ovrgba.MiscFlags = 0;
 
-
         r = m_pD3D11Dev->CreateTexture2D(&desc_ovrgba, 0, &m_ovSurfaceRGBA);
         if (FAILED(r))
         {
@@ -213,8 +212,8 @@ public:
 
         D3D11_TEXTURE2D_DESC desc_ovrgba_copy;
 
-        desc_ovrgba_copy.Width = 1280;
-        desc_ovrgba_copy.Height = 720;
+        desc_ovrgba_copy.Width = m_width;
+        desc_ovrgba_copy.Height = m_height;
         desc_ovrgba_copy.MipLevels = 1;
         desc_ovrgba_copy.ArraySize = 1;
         desc_ovrgba_copy.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -244,7 +243,7 @@ public:
 
       oclStore = CreateFilterStore(oclEnv, "reorder_data_test.cl");
      srcConversionKernel = dynamic_cast<StyleTransfer::SourceConversion*>(oclStore->CreateKernel("srcConversion"));
-        modelcnn.Init("models//model_v2.xml", m_pD3D11Dev, oclEnv->GetContext(), cv::Size(640, 480));
+        modelcnn.Init("models//model_composition_v5_no_padding.xml", m_pD3D11Dev, oclEnv->GetContext(), cv::Size(m_width, m_height));
         
 #endif
 
@@ -387,7 +386,7 @@ public:
                 cv::directx::convertToD3D11Texture2D(u, pSurface);
 
 #if OV_ENABLE
-               modelcnn.Infer(*srcConversionKernel, pSurface, m_ovSurfaceRGBA);
+               modelcnn.Infer(*srcConversionKernel, pSurface, m_ovSurfaceRGBA, cv::Size(m_width, m_height));
                m_pD3D11Ctx->CopyResource(m_ovSurfaceRGBA_cpu_copy, m_ovSurfaceRGBA);
 
                UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
@@ -398,7 +397,7 @@ public:
                    throw std::runtime_error("surface mapping failed!");
                }
 
-               cv::Mat m(720, 1280, CV_8UC4, mappedTex.pData, mappedTex.RowPitch);
+               cv::Mat m(m_height, m_width, CV_8UC4, mappedTex.pData, mappedTex.RowPitch);
                cv::imwrite("cl_test.png", m);
 #endif
 

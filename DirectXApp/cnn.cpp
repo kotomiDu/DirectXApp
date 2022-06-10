@@ -68,7 +68,7 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, cl_con
         set_layout("NCHW").
         set_element_type(ov::element::u8).
         set_color_format(ov::preprocess::ColorFormat::RGB).
-        set_shape({ 1,3,480,640}).
+        //set_shape({ 1,3,480,640}).
         set_memory_type(ov::intel_gpu::memory_type::buffer);
 
     // 3) Adding explicit preprocessing steps:
@@ -77,18 +77,22 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, cl_con
     ppp.input().preprocess()
         //.convert_color(ov::preprocess::ColorFormat::RGB)
         //.convert_layout("NCHW")
-        .resize(ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR)
+        //.resize(ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR)
         .convert_element_type(ov::element::f32)
         .mean(127.5)
         .scale(127.5);
 
     ppp.input().model().set_layout("NCHW");
 
+    
     ppp.output().tensor()
         .set_element_type(ov::element::u8);
 
     model = ppp.build();
 
+    ov::Shape  input_shape = { 1,3,static_cast<size_t>(new_input_resolution.height), static_cast<size_t>(new_input_resolution.width) };
+    model->reshape(input_shape);
+    
     //for (const auto& op : model->get_ops()) {
     //    //if (op->get_name() != "Transpose_455") continue;
     //    if (!std::dynamic_pointer_cast<ov::opset8::Result>(op) &&
@@ -112,26 +116,15 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, cl_con
     compiled_model = core.compile_model(model, remote_context); // change device to RemoteContext
     ov::serialize(compiled_model.get_runtime_model(),"test_graph.xml");
 
-
-    auto input = model->get_parameters().at(0);
-    infer_request = compiled_model.create_infer_request();
     //// --------------------------- Creating infer request ------------------------------------------------
-    //infer_request_ = executable_network.CreateInferRequest();
-    //// ---------------------------------------------------------------------------------------------------
+    infer_request = compiled_model.create_infer_request();
 
     //// Create input and output GPU Blobs
-    int inHeight = 480;
-    int inWidth = 640;
-
-    int outHeight = 720;
-    int outWidth = 1280;
-
-    _inputBuffer = cl::Buffer(_oclCtx, CL_MEM_READ_WRITE, 480 * 640 * 3 * sizeof(uint8_t), NULL, NULL);
-
-    _outputBuffer = cl::Buffer(_oclCtx, CL_MEM_READ_WRITE, 720 * 1280 * 3 * sizeof(uint8_t), NULL, NULL);
-
-    auto shared_in_blob = remote_context.create_tensor(ov::element::u8, {1,3,480,640}, _inputBuffer);
-    auto shared_output_blob = remote_context.create_tensor(ov::element::u8, {1,720,1280,3}, _outputBuffer);
+    
+    _inputBuffer = cl::Buffer(_oclCtx, CL_MEM_READ_WRITE, input_shape[1] * input_shape[2] * input_shape[3] * sizeof(uint8_t), NULL, NULL);
+    _outputBuffer = cl::Buffer(_oclCtx, CL_MEM_READ_WRITE, input_shape[1] * input_shape[2] * input_shape[3] * sizeof(uint8_t), NULL, NULL);
+    auto shared_in_blob = remote_context.create_tensor(ov::element::u8, input_shape, _inputBuffer);
+    auto shared_output_blob = remote_context.create_tensor(ov::element::u8, input_shape, _outputBuffer);  //style transfer output has the same shape with input
     infer_request.set_input_tensor(shared_in_blob);
     infer_request.set_output_tensor(shared_output_blob);
 
@@ -139,9 +132,11 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, cl_con
 }
 
 
-bool Cnn::Infer(StyleTransfer::SourceConversion& srcConversionKrnl, ID3D11Texture2D* input_surface, ID3D11Texture2D* output_surface)
+bool Cnn::Infer(StyleTransfer::SourceConversion& srcConversionKrnl, ID3D11Texture2D* input_surface, ID3D11Texture2D* output_surface, const cv::Size& surface_size)
 {
-    if (!srcConversionKrnl.SetArgumentsRGBtoRGBbuffer(input_surface, _inputBuffer.get(), 640, 480)) {
+
+
+    if (!srcConversionKrnl.SetArgumentsRGBtoRGBbuffer(input_surface, _inputBuffer.get(), surface_size.width, surface_size.height)) {
         return false;
     }
     if (!srcConversionKrnl.Run()) {
@@ -151,7 +146,7 @@ bool Cnn::Infer(StyleTransfer::SourceConversion& srcConversionKrnl, ID3D11Textur
 
     infer_request.infer();
 
-    if (!srcConversionKrnl.SetArgumentsRGBbuffertoRGBA( _outputBuffer.get(), output_surface, 1280, 720)) {
+    if (!srcConversionKrnl.SetArgumentsRGBbuffertoRGBA( _outputBuffer.get(), output_surface, surface_size.width, surface_size.height)) {
         return false;
     }
     if (!srcConversionKrnl.Run()) {
