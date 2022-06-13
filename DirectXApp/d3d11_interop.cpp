@@ -189,7 +189,8 @@ public:
         m_oclDevName = cv::ocl::useOpenCL() ?
             cv::ocl::Context::getDefault().device(0).name() :
             "No OpenCL device";
-#if OV_ENABLE
+if(ov_mode == GPU)
+{
         D3D11_TEXTURE2D_DESC desc_ovrgba;
 
         desc_ovrgba.Width = m_width;
@@ -229,9 +230,7 @@ public:
         {
             throw std::runtime_error("Can't create DX texture");
         }
-#endif
 
-#if OV_ENABLE
         if (!ocl.Init()) {
             return -1;
         }
@@ -245,7 +244,30 @@ public:
      srcConversionKernel = dynamic_cast<StyleTransfer::SourceConversion*>(oclStore->CreateKernel("srcConversion"));
         modelcnn.Init("models//model_composition_v5_no_padding.xml", m_pD3D11Dev, oclEnv->GetContext(), cv::Size(m_width, m_height));
         
-#endif
+}
+if (ov_mode == CPUGPU_COPY)
+{
+    D3D11_TEXTURE2D_DESC desc_ovrgba_copy;
+
+    desc_ovrgba_copy.Width = m_width;
+    desc_ovrgba_copy.Height = m_height;
+    desc_ovrgba_copy.MipLevels = 1;
+    desc_ovrgba_copy.ArraySize = 1;
+    desc_ovrgba_copy.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    desc_ovrgba_copy.SampleDesc.Count = 1;
+    desc_ovrgba_copy.SampleDesc.Quality = 0;
+    desc_ovrgba_copy.BindFlags = 0;
+    desc_ovrgba_copy.Usage = D3D11_USAGE_STAGING;
+    desc_ovrgba_copy.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    desc_ovrgba_copy.MiscFlags = 0;
+
+    r = m_pD3D11Dev->CreateTexture2D(&desc_ovrgba_copy, 0, &m_ovSurfaceRGBA_cpu_copy);
+    if (FAILED(r))
+    {
+        throw std::runtime_error("Can't create DX texture");
+    }
+    modelcnn.Init("models//model_composition_v5_no_padding.xml", cv::Size(m_width, m_height));
+}
 
         return EXIT_SUCCESS;
     } // create()
@@ -385,7 +407,8 @@ public:
                 //std::cout << u.size().width << ";" << u.size().height << std::endl;
                 cv::directx::convertToD3D11Texture2D(u, pSurface);
 
-#if OV_ENABLE
+if(ov_mode == GPU)
+{
                modelcnn.Infer(*srcConversionKernel, pSurface, m_ovSurfaceRGBA, cv::Size(m_width, m_height));
                pSurface = m_ovSurfaceRGBA;
             /*   m_pD3D11Ctx->CopyResource(m_ovSurfaceRGBA_cpu_copy, m_ovSurfaceRGBA);
@@ -400,7 +423,42 @@ public:
 
                cv::Mat m(m_height, m_width, CV_8UC4, mappedTex.pData, mappedTex.RowPitch);
                cv::imwrite("cl_test.png", m);*/
-#endif
+}
+if (ov_mode == CPUGPU_COPY)
+{
+    m_pD3D11Ctx->CopyResource(m_ovSurfaceRGBA_cpu_copy, pSurface);
+
+    UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
+    D3D11_MAPPED_SUBRESOURCE mappedTex;
+    r = m_pD3D11Ctx->Map(m_ovSurfaceRGBA_cpu_copy, subResource, D3D11_MAP_READ, 0, &mappedTex);
+    if (FAILED(r))
+    {
+        throw std::runtime_error("surface mapping failed!");
+    }
+
+    cv::Mat m(m_height, m_width, CV_8UC4, mappedTex.pData, mappedTex.RowPitch);
+    cv::cvtColor(m, m, cv::COLOR_RGBA2BGR);
+   // cv::imwrite("test.png", m);
+    cv::Mat output;
+    modelcnn.Infer(m, output,cv::Size(m_width, m_height));
+    //cv::imwrite("styled.png", output);
+
+    cv::cvtColor(output, output, cv::COLOR_BGR2RGBA);
+    D3D11_MAPPED_SUBRESOURCE mappedTex1;
+    r = m_pD3D11Ctx->Map(m_pSurfaceRGBA, subResource, D3D11_MAP_WRITE_DISCARD, 0, &mappedTex1);
+    //当需要用CPU读写（GPU的）subresouce（最常用如buffer）时，就用Map()得到该subresource的pointer,将D3D11_MAPPED_SUBRESOURCE::pData强制转换成CPU理解的类型
+    if (FAILED(r))
+    {
+        throw std::runtime_error("surface mapping failed!");
+    }
+
+    cv::Mat m1(m_height, m_width, CV_8UC4, mappedTex1.pData, mappedTex1.RowPitch);
+    output.copyTo(m1);
+
+    m_pD3D11Ctx->Unmap(m_pSurfaceRGBA, subResource);
+    pSurface = m_pSurfaceRGBA;
+
+}
 
                 if (mode == MODE_GPU_NV12)
                 {

@@ -28,11 +28,19 @@ public:
         MODE_GPU_NV12
     };
 
+    enum OV_MODE
+    {
+        OFF,
+        CPUGPU_COPY,
+        GPU
+    };
+
     D3DSample(int width, int height, std::string& window_name, cv::VideoCapture& cap) :
         WinApp(width, height, window_name)
     {
         m_shutdown          = false;
         m_mode              = MODE_GPU_RGBA;
+        ov_mode             = CPUGPU_COPY;
         m_modeStr[0]        = cv::String("Processing on CPU");
         m_modeStr[1]        = cv::String("Processing on GPU RGBA");
         m_modeStr[2]        = cv::String("Processing on GPU NV12");
@@ -59,16 +67,19 @@ protected:
             if (wParam == '1')
             {
                 m_mode = MODE_CPU;
+                ov_mode = OFF;
                 return EXIT_SUCCESS;
             }
             if (wParam == '2')
             {
                 m_mode = MODE_GPU_RGBA;
+                ov_mode = GPU;
                 return EXIT_SUCCESS;
             }
             if (wParam == '3')
             {
                 m_mode = MODE_GPU_NV12;
+                ov_mode = OFF;
                 return EXIT_SUCCESS;
             }
             else if (wParam == VK_SPACE)
@@ -79,6 +90,12 @@ protected:
             else if (wParam == VK_ESCAPE)
             {
                 return cleanup();
+            }
+            else if (wParam == '4')
+            {
+                m_mode = MODE_GPU_RGBA;
+                ov_mode = CPUGPU_COPY;
+                return EXIT_SUCCESS;
             }
             break;
 
@@ -100,6 +117,7 @@ protected:
     bool               m_shutdown;
     bool               m_demo_processing;
     MODE               m_mode;
+    OV_MODE            ov_mode;
     cv::String         m_modeStr[3];
     cv::VideoCapture   m_cap;
     cv::Mat            m_frame_bgr;
@@ -127,8 +145,9 @@ int d3d_app(int argc, char** argv, std::string& title)
         "Hot keys: \n"
         "  SPACE - turn processing on/off\n"
         "    1   - process DX surface through OpenCV on CPU\n"
-        "    2   - process DX RGBA surface through OpenCV on GPU (via OpenCL)\n"
+        "    2   - process DX RGBA surface through OpenCV on GPU (via OpenCL) + OV GPU\n"
         "    3   - process DX NV12 surface through OpenCV on GPU (via OpenCL)\n"
+        "    4   - process DX RGBA surface through OpenCV on GPU (via OpenCL) + OV CPUGPU COPY\n"
         "   ESC  - exit\n\n");
 
     parser.printMessage();

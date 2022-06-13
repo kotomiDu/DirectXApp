@@ -23,7 +23,7 @@ class Cnn {
     void Init(const std::string &model_path,  ID3D11Device*& d3d_device, cl_context ctx ,
               const cv::Size &new_input_resolution = cv::Size());
 
-    void Init(const std::string& model_path, ID3D11Device*& d3d_device, cv::Mat input_data);
+    void Init(const std::string& model_path, const cv::Size& new_input_resolution = cv::Size());
 
     bool is_initialized() const {return is_initialized_;}
 
@@ -33,6 +33,7 @@ class Cnn {
     const cv::Size& input_size() const {return input_size_;}
 
     bool Infer(StyleTransfer::SourceConversion& RGBtoRGBfloatKrnl, ID3D11Texture2D* input_surface, ID3D11Texture2D* output_surface, const cv::Size& surface_size);
+    void Infer(cv::Mat inputdata, cv::Mat& outputdata, const cv::Size& new_input_resolution);
 
   private:
     bool is_initialized_;

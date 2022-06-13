@@ -17,7 +17,7 @@
 #include "openvino/opsets/opset8.hpp"
 #include <fstream>
 
-void Cnn::Init(const std::string& model_path, ID3D11Device*& d3d_device, cv::Mat input_data)
+void Cnn::Init(const std::string& model_path, const cv::Size& new_input_resolution)
 {
     ov::Core core;
 
@@ -27,30 +27,69 @@ void Cnn::Init(const std::string& model_path, ID3D11Device*& d3d_device, cv::Mat
     ppp.input()
         .tensor()
         .set_layout("NHWC")
-        .set_element_type(ov::element::u8)
-        .set_shape({ 1,480,640,3 });
-
+        .set_element_type(ov::element::u8);
 
     ppp.input().preprocess()
-        .convert_layout("NCHW")
-        .resize(ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR)
-        .convert_element_type(ov::element::f32);
-
+        //.convert_layout("NCHW")
+        .convert_element_type(ov::element::f32)
+        .mean(127.5)
+        .scale(127.5);
     ppp.input().model().set_layout("NCHW");
-
     ppp.output().tensor()
-        .set_element_type(ov::element::f32);
+        .set_element_type(ov::element::u8);
 
     model = ppp.build();
 
-    auto compiled_model = core.compile_model(model,"GPU");
+    ov::Shape  input_shape = { 1,static_cast<size_t>(new_input_resolution.height), static_cast<size_t>(new_input_resolution.width) ,3};
+    model->reshape(input_shape);
+    for (const auto& op : model->get_ops()) {
+    if (op->get_name() != "Transpose_330") continue;
+    if (!std::dynamic_pointer_cast<ov::opset8::Result>(op) &&
+        !std::dynamic_pointer_cast<ov::opset8::Parameter>(op) &&
+        !std::dynamic_pointer_cast<ov::opset8::VariadicSplit>(op) &&
+        !std::dynamic_pointer_cast<ov::opset8::TopK>(op))
+    {
+        model->add_output(op);
+        std::cout << op->get_name() << std::endl;
+    }
+
+}
+
+    compiled_model = core.compile_model(model,"GPU");
     infer_request = compiled_model.create_infer_request();
+    //ov::serialize(compiled_model.get_runtime_model(), "test_graph.xml");
+}
+void Cnn::Infer(cv::Mat inputdata, cv::Mat &outputdata, const cv::Size& new_input_resolution)
+{
 
     ov::element::Type input_type = ov::element::u8;
-    ov::Shape input_shape = { 1, 480, 640, 3 };
-    ov::Tensor input_tensor = ov::Tensor(input_type, input_shape, input_data.data);
+    ov::Shape  input_shape = { 1,static_cast<size_t>(new_input_resolution.height), static_cast<size_t>(new_input_resolution.width) , 3};
+    
+    ov::Tensor input_tensor = ov::Tensor(input_type, input_shape,inputdata.data);
     infer_request.set_input_tensor(input_tensor);
-    infer_request.infer();
+    infer_request.infer(); 
+    for (auto&& output : compiled_model.outputs()) {
+        const std::string name = output.get_names().empty() ? "NONE" : output.get_any_name();
+        if (name == "NONE")
+        {
+            continue;
+        }
+
+        const ov::Tensor& output_tensor = infer_request.get_tensor(name);
+
+        auto data_size = output_tensor.get_size();
+        auto data = output_tensor.data<uint8_t>();
+
+        //copy vector to mat
+        cv::Mat channelR(input_shape[1], input_shape[2], CV_8UC1, data);
+        cv::Mat channelG(input_shape[1], input_shape[2], CV_8UC1, data + input_shape[1] * input_shape[2]);
+        cv::Mat channelB(input_shape[1], input_shape[2], CV_8UC1, data + 2 * input_shape[1] * input_shape[2]);
+        // RGB2BGR
+        std::vector<cv::Mat> channels{ channelB, channelG, channelR };
+        // Create the output matrix
+        merge(channels, outputdata);
+        //cv::Mat outputImage(cv::Size(new_input_resolution.width, new_input_resolution.height), CV_8UC3, data);
+    }
 }
 
 void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, cl_context ctx , const cv::Size &new_input_resolution) {
@@ -84,7 +123,6 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, cl_con
 
     ppp.input().model().set_layout("NCHW");
 
-    
     ppp.output().tensor()
         .set_element_type(ov::element::u8);
 
