@@ -5,8 +5,15 @@
     <RemoteDebuggerCommand>C:\Users\yarudu\OneDrive - Intel Corporation\Documents\project\DirectXApp\x64\Debug\DirectXApp.exe</RemoteDebuggerCommand>
     <RemoteDebuggerCommandArguments>
     </RemoteDebuggerCommandArguments>
-    <RemoteDebuggerServerName>10.254.214.148</RemoteDebuggerServerName>
+    <RemoteDebuggerServerName>10.255.30.137</RemoteDebuggerServerName>
     <RemoteDebuggerConnection>RemoteWithoutAuthentication</RemoteDebuggerConnection>
     <RemoteDebuggerWorkingDirectory>C:\Users\yarudu\OneDrive - Intel Corporation\Documents\project\DirectXApp</RemoteDebuggerWorkingDirectory>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <RemoteDebuggerServerName>10.255.29.21</RemoteDebuggerServerName>
+    <DebuggerFlavor>WindowsRemoteDebugger</DebuggerFlavor>
+    <RemoteDebuggerCommand>C:\Users\yarudu\OneDrive - Intel Corporation\Documents\project\DirectXApp\x64\Release\DirectXApp.exe</RemoteDebuggerCommand>
+    <RemoteDebuggerWorkingDirectory>C:\Users\yarudu\OneDrive - Intel Corporation\Documents\project\DirectXApp</RemoteDebuggerWorkingDirectory>
+    <RemoteDebuggerConnection>RemoteWithoutAuthentication</RemoteDebuggerConnection>
   </PropertyGroup>
 </Project>

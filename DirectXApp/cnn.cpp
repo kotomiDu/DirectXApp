@@ -42,18 +42,17 @@ void Cnn::Init(const std::string& model_path, const cv::Size& new_input_resoluti
 
     ov::Shape  input_shape = { 1,static_cast<size_t>(new_input_resolution.height), static_cast<size_t>(new_input_resolution.width) ,3};
     model->reshape(input_shape);
-    for (const auto& op : model->get_ops()) {
-    if (op->get_name() != "Transpose_330") continue;
-    if (!std::dynamic_pointer_cast<ov::opset8::Result>(op) &&
-        !std::dynamic_pointer_cast<ov::opset8::Parameter>(op) &&
-        !std::dynamic_pointer_cast<ov::opset8::VariadicSplit>(op) &&
-        !std::dynamic_pointer_cast<ov::opset8::TopK>(op))
-    {
-        model->add_output(op);
-        std::cout << op->get_name() << std::endl;
-    }
-
-}
+    //for (const auto& op : model->get_ops()) {
+    //    if (op->get_name() != "Transpose_330") continue;
+    //    if (!std::dynamic_pointer_cast<ov::opset8::Result>(op) &&
+    //        !std::dynamic_pointer_cast<ov::opset8::Parameter>(op) &&
+    //        !std::dynamic_pointer_cast<ov::opset8::VariadicSplit>(op) &&
+    //        !std::dynamic_pointer_cast<ov::opset8::TopK>(op))
+    //    {
+    //        model->add_output(op);
+    //        std::cout << op->get_name() << std::endl;
+    //    }
+    //}
 
     compiled_model = core.compile_model(model,"GPU");
     infer_request = compiled_model.create_infer_request();
