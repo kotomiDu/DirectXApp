@@ -40,11 +40,11 @@ public:
     {
         m_shutdown          = false;
         m_mode              = MODE_GPU_RGBA;
-        ov_mode             = CPUGPU_COPY;
+        ov_mode             = GPU;
         m_modeStr[0]        = cv::String("Processing on CPU");
         m_modeStr[1]        = cv::String("Processing on GPU RGBA");
         m_modeStr[2]        = cv::String("Processing on GPU NV12");
-        m_demo_processing   = true;
+        m_demo_processing   = false;
         m_cap               = cap;
     }
 

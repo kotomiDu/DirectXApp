@@ -152,7 +152,7 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, cl_con
     auto remote_context = ov::intel_gpu::ocl::ClContext(core, ctx);
     _oclCtx = ctx;
     compiled_model = core.compile_model(model, remote_context); // change device to RemoteContext
-    ov::serialize(compiled_model.get_runtime_model(),"test_graph.xml");
+    //ov::serialize(compiled_model.get_runtime_model(),"test_graph.xml");
 
     //// --------------------------- Creating infer request ------------------------------------------------
     infer_request = compiled_model.create_infer_request();

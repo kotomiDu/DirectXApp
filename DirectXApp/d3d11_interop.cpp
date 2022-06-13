@@ -381,37 +381,13 @@ if (ov_mode == CPUGPU_COPY)
             case MODE_GPU_RGBA:
             case MODE_GPU_NV12:
             {
-                // process video frame on GPU
-                cv::UMat u;
-
-                cv::directx::convertFromD3D11Texture2D(pSurface, u);
-
-                if (m_demo_processing)
-                {
-                    // blur data from D3D11 surface with OpenCV on GPU with OpenCL
-                    cv::blur(u, u, cv::Size(15, 15));
-                 
-                }
-
-                m_timer.stop();
-
-                cv::String strMode = cv::format("mode: %s", m_modeStr[mode].c_str());
-                cv::String strProcessing = m_demo_processing ? "blur frame" : "copy frame";
-                cv::String strTime = cv::format("time: %4.3f msec", m_timer.getTimeMilli());
-                cv::String strDevName = cv::format("OpenCL device: %s", m_oclDevName.c_str());
-
-                cv::putText(u, strMode, cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
-                cv::putText(u, strProcessing, cv::Point(0, 40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
-                cv::putText(u, strTime, cv::Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
-                cv::putText(u, strDevName, cv::Point(0, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
-                //std::cout << u.size().width << ";" << u.size().height << std::endl;
-                cv::directx::convertToD3D11Texture2D(u, pSurface);
+                
 
 if(ov_mode == GPU)
 {
                modelcnn.Infer(*srcConversionKernel, pSurface, m_ovSurfaceRGBA, cv::Size(m_width, m_height));
                pSurface = m_ovSurfaceRGBA;
-            /*   m_pD3D11Ctx->CopyResource(m_ovSurfaceRGBA_cpu_copy, m_ovSurfaceRGBA);
+             /*  m_pD3D11Ctx->CopyResource(m_ovSurfaceRGBA_cpu_copy, m_ovSurfaceRGBA);
 
                UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
                D3D11_MAPPED_SUBRESOURCE mappedTex;
@@ -422,6 +398,7 @@ if(ov_mode == GPU)
                }
 
                cv::Mat m(m_height, m_width, CV_8UC4, mappedTex.pData, mappedTex.RowPitch);
+               cv::cvtColor(m, m, cv::COLOR_RGBA2BGR);
                cv::imwrite("cl_test.png", m);*/
 }
 if (ov_mode == CPUGPU_COPY)
@@ -459,6 +436,31 @@ if (ov_mode == CPUGPU_COPY)
     pSurface = m_pSurfaceRGBA;
 
 }
+// process video frame on GPU
+cv::UMat u;
+
+cv::directx::convertFromD3D11Texture2D(pSurface, u);
+
+if (m_demo_processing)
+{
+    // blur data from D3D11 surface with OpenCV on GPU with OpenCL
+    cv::blur(u, u, cv::Size(15, 15));
+
+}
+
+m_timer.stop();
+
+cv::String strMode = cv::format("mode: %s", m_modeStr[mode].c_str());
+cv::String strProcessing = m_demo_processing ? "blur frame" : "copy frame";
+cv::String strTime = cv::format("time: %4.3f msec", m_timer.getTimeMilli());
+cv::String strDevName = cv::format("OpenCL device: %s", m_oclDevName.c_str());
+
+cv::putText(u, strMode, cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+cv::putText(u, strProcessing, cv::Point(0, 40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+cv::putText(u, strTime, cv::Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+cv::putText(u, strDevName, cv::Point(0, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+//std::cout << u.size().width << ";" << u.size().height << std::endl;
+cv::directx::convertToD3D11Texture2D(u, pSurface);
 
                 if (mode == MODE_GPU_NV12)
                 {
