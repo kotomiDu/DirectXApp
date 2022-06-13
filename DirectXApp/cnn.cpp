@@ -20,7 +20,7 @@
 void Cnn::Init(const std::string& model_path, const cv::Size& new_input_resolution)
 {
     ov::Core core;
-
+    core.set_property(ov::cache_dir("cache"));
     auto model = core.read_model(model_path);
 
     ov::preprocess::PrePostProcessor ppp(model);
@@ -97,7 +97,7 @@ void Cnn::Init(const std::string &model_path,  ID3D11Device*& d3d_device, cl_con
 
     //// --------------------------- 1. Reading network ----------------------------------------------------
      ov::Core core;
-
+     core.set_property(ov::cache_dir("cache"));
     auto model = core.read_model(model_path);
 
 

@@ -189,86 +189,90 @@ public:
         m_oclDevName = cv::ocl::useOpenCL() ?
             cv::ocl::Context::getDefault().device(0).name() :
             "No OpenCL device";
-if(ov_mode == GPU)
-{
-        D3D11_TEXTURE2D_DESC desc_ovrgba;
-
-        desc_ovrgba.Width = m_width;
-        desc_ovrgba.Height = m_height;
-        desc_ovrgba.MipLevels = 1;
-        desc_ovrgba.ArraySize = 1;
-        desc_ovrgba.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        desc_ovrgba.SampleDesc.Count = 1;
-        desc_ovrgba.SampleDesc.Quality = 0;
-        desc_ovrgba.BindFlags = 0;
-        desc_ovrgba.Usage = D3D11_USAGE_DEFAULT;
-        desc_ovrgba.CPUAccessFlags = 0;// D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
-        desc_ovrgba.MiscFlags = 0;
-
-        r = m_pD3D11Dev->CreateTexture2D(&desc_ovrgba, 0, &m_ovSurfaceRGBA);
-        if (FAILED(r))
+        m_timer.reset();
+        m_timer.start();
+        if(ov_mode == GPU)
         {
-            throw std::runtime_error("Can't create DX texture");
-        }
+                D3D11_TEXTURE2D_DESC desc_ovrgba;
 
-        D3D11_TEXTURE2D_DESC desc_ovrgba_copy;
+                desc_ovrgba.Width = m_width;
+                desc_ovrgba.Height = m_height;
+                desc_ovrgba.MipLevels = 1;
+                desc_ovrgba.ArraySize = 1;
+                desc_ovrgba.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+                desc_ovrgba.SampleDesc.Count = 1;
+                desc_ovrgba.SampleDesc.Quality = 0;
+                desc_ovrgba.BindFlags = 0;
+                desc_ovrgba.Usage = D3D11_USAGE_DEFAULT;
+                desc_ovrgba.CPUAccessFlags = 0;// D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
+                desc_ovrgba.MiscFlags = 0;
 
-        desc_ovrgba_copy.Width = m_width;
-        desc_ovrgba_copy.Height = m_height;
-        desc_ovrgba_copy.MipLevels = 1;
-        desc_ovrgba_copy.ArraySize = 1;
-        desc_ovrgba_copy.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        desc_ovrgba_copy.SampleDesc.Count = 1;
-        desc_ovrgba_copy.SampleDesc.Quality = 0;
-        desc_ovrgba_copy.BindFlags = 0;
-        desc_ovrgba_copy.Usage = D3D11_USAGE_STAGING;
-        desc_ovrgba_copy.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-        desc_ovrgba_copy.MiscFlags = 0;
+                r = m_pD3D11Dev->CreateTexture2D(&desc_ovrgba, 0, &m_ovSurfaceRGBA);
+                if (FAILED(r))
+                {
+                    throw std::runtime_error("Can't create DX texture");
+                }
 
-        r = m_pD3D11Dev->CreateTexture2D(&desc_ovrgba_copy, 0, &m_ovSurfaceRGBA_cpu_copy);
-        if (FAILED(r))
-        {
-            throw std::runtime_error("Can't create DX texture");
-        }
+                D3D11_TEXTURE2D_DESC desc_ovrgba_copy;
 
-        if (!ocl.Init()) {
-            return -1;
-        }
-        oclEnv = ocl.GetEnv(m_pD3D11Dev).get();
-        if (!oclEnv) {
-            std::cerr << "Failed to get OCL environment for the session" << std::endl;
-            return -1;
-        }
+                desc_ovrgba_copy.Width = m_width;
+                desc_ovrgba_copy.Height = m_height;
+                desc_ovrgba_copy.MipLevels = 1;
+                desc_ovrgba_copy.ArraySize = 1;
+                desc_ovrgba_copy.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+                desc_ovrgba_copy.SampleDesc.Count = 1;
+                desc_ovrgba_copy.SampleDesc.Quality = 0;
+                desc_ovrgba_copy.BindFlags = 0;
+                desc_ovrgba_copy.Usage = D3D11_USAGE_STAGING;
+                desc_ovrgba_copy.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+                desc_ovrgba_copy.MiscFlags = 0;
 
-      oclStore = CreateFilterStore(oclEnv, "reorder_data_test.cl");
-     srcConversionKernel = dynamic_cast<StyleTransfer::SourceConversion*>(oclStore->CreateKernel("srcConversion"));
-        modelcnn.Init("models//model_composition_v5_no_padding.xml", m_pD3D11Dev, oclEnv->GetContext(), cv::Size(m_width, m_height));
+                r = m_pD3D11Dev->CreateTexture2D(&desc_ovrgba_copy, 0, &m_ovSurfaceRGBA_cpu_copy);
+                if (FAILED(r))
+                {
+                    throw std::runtime_error("Can't create DX texture");
+                }
+
+                if (!ocl.Init()) {
+                    return -1;
+                }
+                oclEnv = ocl.GetEnv(m_pD3D11Dev).get();
+                if (!oclEnv) {
+                    std::cerr << "Failed to get OCL environment for the session" << std::endl;
+                    return -1;
+                }
+
+                oclStore = CreateFilterStore(oclEnv, "reorder_data_test.cl");
+                srcConversionKernel = dynamic_cast<StyleTransfer::SourceConversion*>(oclStore->CreateKernel("srcConversion"));
+    
+                modelcnn.Init("models//model_composition_v5_no_padding.xml", m_pD3D11Dev, oclEnv->GetContext(), cv::Size(m_width, m_height));
         
-}
-if (ov_mode == CPUGPU_COPY)
-{
-    D3D11_TEXTURE2D_DESC desc_ovrgba_copy;
+        }
+        if (ov_mode == CPUGPU_COPY)
+        {
+            D3D11_TEXTURE2D_DESC desc_ovrgba_copy;
 
-    desc_ovrgba_copy.Width = m_width;
-    desc_ovrgba_copy.Height = m_height;
-    desc_ovrgba_copy.MipLevels = 1;
-    desc_ovrgba_copy.ArraySize = 1;
-    desc_ovrgba_copy.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    desc_ovrgba_copy.SampleDesc.Count = 1;
-    desc_ovrgba_copy.SampleDesc.Quality = 0;
-    desc_ovrgba_copy.BindFlags = 0;
-    desc_ovrgba_copy.Usage = D3D11_USAGE_STAGING;
-    desc_ovrgba_copy.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-    desc_ovrgba_copy.MiscFlags = 0;
+            desc_ovrgba_copy.Width = m_width;
+            desc_ovrgba_copy.Height = m_height;
+            desc_ovrgba_copy.MipLevels = 1;
+            desc_ovrgba_copy.ArraySize = 1;
+            desc_ovrgba_copy.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            desc_ovrgba_copy.SampleDesc.Count = 1;
+            desc_ovrgba_copy.SampleDesc.Quality = 0;
+            desc_ovrgba_copy.BindFlags = 0;
+            desc_ovrgba_copy.Usage = D3D11_USAGE_STAGING;
+            desc_ovrgba_copy.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+            desc_ovrgba_copy.MiscFlags = 0;
 
-    r = m_pD3D11Dev->CreateTexture2D(&desc_ovrgba_copy, 0, &m_ovSurfaceRGBA_cpu_copy);
-    if (FAILED(r))
-    {
-        throw std::runtime_error("Can't create DX texture");
-    }
-    modelcnn.Init("models//model_composition_v5_no_padding.xml", cv::Size(m_width, m_height));
-}
-
+            r = m_pD3D11Dev->CreateTexture2D(&desc_ovrgba_copy, 0, &m_ovSurfaceRGBA_cpu_copy);
+            if (FAILED(r))
+            {
+                throw std::runtime_error("Can't create DX texture");
+            }
+            modelcnn.Init("models//model_composition_v5_no_padding.xml", cv::Size(m_width, m_height));
+        }
+        m_timer.stop();
+        std::cout <<"Loading model:"<< m_timer.getTimeMilli() << "ms" <<std::endl;
         return EXIT_SUCCESS;
     } // create()
 
@@ -381,86 +385,83 @@ if (ov_mode == CPUGPU_COPY)
             case MODE_GPU_RGBA:
             case MODE_GPU_NV12:
             {
-                
+                if(ov_mode == GPU)
+                {
+                    modelcnn.Infer(*srcConversionKernel, pSurface, m_ovSurfaceRGBA, cv::Size(m_width, m_height));
+                    pSurface = m_ovSurfaceRGBA;
+                    /*  m_pD3D11Ctx->CopyResource(m_ovSurfaceRGBA_cpu_copy, m_ovSurfaceRGBA);
 
-if(ov_mode == GPU)
-{
-               modelcnn.Infer(*srcConversionKernel, pSurface, m_ovSurfaceRGBA, cv::Size(m_width, m_height));
-               pSurface = m_ovSurfaceRGBA;
-             /*  m_pD3D11Ctx->CopyResource(m_ovSurfaceRGBA_cpu_copy, m_ovSurfaceRGBA);
+                    UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
+                    D3D11_MAPPED_SUBRESOURCE mappedTex;
+                    r = m_pD3D11Ctx->Map(m_ovSurfaceRGBA_cpu_copy, subResource, D3D11_MAP_READ, 0, &mappedTex);
+                    if (FAILED(r))
+                    {
+                        throw std::runtime_error("surface mapping failed!");
+                    }
 
-               UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
-               D3D11_MAPPED_SUBRESOURCE mappedTex;
-               r = m_pD3D11Ctx->Map(m_ovSurfaceRGBA_cpu_copy, subResource, D3D11_MAP_READ, 0, &mappedTex);
-               if (FAILED(r))
-               {
-                   throw std::runtime_error("surface mapping failed!");
-               }
+                    cv::Mat m(m_height, m_width, CV_8UC4, mappedTex.pData, mappedTex.RowPitch);
+                    cv::cvtColor(m, m, cv::COLOR_RGBA2BGR);
+                    cv::imwrite("cl_test.png", m);*/
+                }
+                if (ov_mode == CPUGPU_COPY)
+                {
+                    m_pD3D11Ctx->CopyResource(m_ovSurfaceRGBA_cpu_copy, pSurface);
 
-               cv::Mat m(m_height, m_width, CV_8UC4, mappedTex.pData, mappedTex.RowPitch);
-               cv::cvtColor(m, m, cv::COLOR_RGBA2BGR);
-               cv::imwrite("cl_test.png", m);*/
-}
-if (ov_mode == CPUGPU_COPY)
-{
-    m_pD3D11Ctx->CopyResource(m_ovSurfaceRGBA_cpu_copy, pSurface);
+                    UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
+                    D3D11_MAPPED_SUBRESOURCE mappedTex;
+                    r = m_pD3D11Ctx->Map(m_ovSurfaceRGBA_cpu_copy, subResource, D3D11_MAP_READ, 0, &mappedTex);
+                    if (FAILED(r))
+                    {
+                    throw std::runtime_error("surface mapping failed!");
+                    }
 
-    UINT subResource = ::D3D11CalcSubresource(0, 0, 1);
-    D3D11_MAPPED_SUBRESOURCE mappedTex;
-    r = m_pD3D11Ctx->Map(m_ovSurfaceRGBA_cpu_copy, subResource, D3D11_MAP_READ, 0, &mappedTex);
-    if (FAILED(r))
-    {
-        throw std::runtime_error("surface mapping failed!");
-    }
+                    cv::Mat m(m_height, m_width, CV_8UC4, mappedTex.pData, mappedTex.RowPitch);
+                    cv::cvtColor(m, m, cv::COLOR_RGBA2BGR);
+                    // cv::imwrite("test.png", m);
+                    cv::Mat output;
+                    modelcnn.Infer(m, output,cv::Size(m_width, m_height));
+                    //cv::imwrite("styled.png", output);
 
-    cv::Mat m(m_height, m_width, CV_8UC4, mappedTex.pData, mappedTex.RowPitch);
-    cv::cvtColor(m, m, cv::COLOR_RGBA2BGR);
-   // cv::imwrite("test.png", m);
-    cv::Mat output;
-    modelcnn.Infer(m, output,cv::Size(m_width, m_height));
-    //cv::imwrite("styled.png", output);
+                    cv::cvtColor(output, output, cv::COLOR_BGR2RGBA);
+                    D3D11_MAPPED_SUBRESOURCE mappedTex1;
+                    r = m_pD3D11Ctx->Map(m_pSurfaceRGBA, subResource, D3D11_MAP_WRITE_DISCARD, 0, &mappedTex1);
+                    //当需要用CPU读写（GPU的）subresouce（最常用如buffer）时，就用Map()得到该subresource的pointer,将D3D11_MAPPED_SUBRESOURCE::pData强制转换成CPU理解的类型
+                    if (FAILED(r))
+                    {
+                    throw std::runtime_error("surface mapping failed!");
+                    }
 
-    cv::cvtColor(output, output, cv::COLOR_BGR2RGBA);
-    D3D11_MAPPED_SUBRESOURCE mappedTex1;
-    r = m_pD3D11Ctx->Map(m_pSurfaceRGBA, subResource, D3D11_MAP_WRITE_DISCARD, 0, &mappedTex1);
-    //当需要用CPU读写（GPU的）subresouce（最常用如buffer）时，就用Map()得到该subresource的pointer,将D3D11_MAPPED_SUBRESOURCE::pData强制转换成CPU理解的类型
-    if (FAILED(r))
-    {
-        throw std::runtime_error("surface mapping failed!");
-    }
+                    cv::Mat m1(m_height, m_width, CV_8UC4, mappedTex1.pData, mappedTex1.RowPitch);
+                    output.copyTo(m1);
 
-    cv::Mat m1(m_height, m_width, CV_8UC4, mappedTex1.pData, mappedTex1.RowPitch);
-    output.copyTo(m1);
+                    m_pD3D11Ctx->Unmap(m_pSurfaceRGBA, subResource);
+                    pSurface = m_pSurfaceRGBA;
 
-    m_pD3D11Ctx->Unmap(m_pSurfaceRGBA, subResource);
-    pSurface = m_pSurfaceRGBA;
+                }
+                // process video frame on GPU
+                cv::UMat u;
+                cv::directx::convertFromD3D11Texture2D(pSurface, u);
 
-}
-// process video frame on GPU
-cv::UMat u;
+                if (m_demo_processing)
+                {
+                    // blur data from D3D11 surface with OpenCV on GPU with OpenCL
+                    cv::blur(u, u, cv::Size(15, 15));
 
-cv::directx::convertFromD3D11Texture2D(pSurface, u);
+                }
 
-if (m_demo_processing)
-{
-    // blur data from D3D11 surface with OpenCV on GPU with OpenCL
-    cv::blur(u, u, cv::Size(15, 15));
+                m_timer.stop();
 
-}
+                cv::String strMode = cv::format("mode: %s", m_modeStr[mode].c_str());
+                cv::String strProcessing = m_demo_processing ? "blur frame" : "copy frame";
+                cv::String strTime = cv::format("time: %4.3f msec", m_timer.getTimeMilli());
+                cv::String strDevName = cv::format("OpenCL device: %s", m_oclDevName.c_str());
 
-m_timer.stop();
-
-cv::String strMode = cv::format("mode: %s", m_modeStr[mode].c_str());
-cv::String strProcessing = m_demo_processing ? "blur frame" : "copy frame";
-cv::String strTime = cv::format("time: %4.3f msec", m_timer.getTimeMilli());
-cv::String strDevName = cv::format("OpenCL device: %s", m_oclDevName.c_str());
-
-cv::putText(u, strMode, cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
-cv::putText(u, strProcessing, cv::Point(0, 40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
-cv::putText(u, strTime, cv::Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
-cv::putText(u, strDevName, cv::Point(0, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
-//std::cout << u.size().width << ";" << u.size().height << std::endl;
-cv::directx::convertToD3D11Texture2D(u, pSurface);
+                cv::putText(u, strMode, cv::Point(0, 20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                cv::putText(u, strProcessing, cv::Point(0, 40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                cv::putText(u, strTime, cv::Point(0, 60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                cv::putText(u, strDevName, cv::Point(0, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 200), 2);
+                //std::cout << u.size().width << ";" << u.size().height << std::endl;
+                cv::directx::convertToD3D11Texture2D(u, pSurface);
 
                 if (mode == MODE_GPU_NV12)
                 {
